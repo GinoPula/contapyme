@@ -875,7 +875,7 @@ function renderDeclaraciones() {
   const rows=decls.map(d=>`<tr>
     <td><div style="font-weight:700">${esc(d.tipo)}</div><div style="font-size:11px;font-family:var(--fm);color:var(--txt3)">${d.periodo}</div></td>
     <td><span class="badge ${bmap[d.estado]||'bm'}">${d.estado}</span></td>
-    <td style="font-size:12px;color:${diasHasta(d.vencimiento)<=5&&d.estado!=='presentada'?'var(--acc4)':'var(--txt2)';font-weight:${diasHasta(d.vencimiento)<=5?700:400}">${d.vencimiento||'—'}</td>
+    <td style="font-size:12px;color:${diasHasta(d.vencimiento)<=5&&d.estado!=='presentada'?'var(--acc4)':'var(--txt2)'}">${d.vencimiento||'—'}</td>
     <td class="r mono">${d.igv?S(d.igv):'—'}</td>
     <td class="r mono">${d.renta?S(d.renta):'—'}</td>
     <td style="font-size:12px;color:var(--txt3);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(d.notas||'—')}</td>
