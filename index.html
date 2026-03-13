@@ -1,0 +1,1440 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ContaGestión PRO — Sistema Contable Integral</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<!-- FIREBASE SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, setDoc, onSnapshot, query, orderBy, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+// ═══════════════════════════════════════════════════
+// 🔥 PEGA AQUÍ TU CONFIGURACIÓN DE FIREBASE
+// ═══════════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyBMTc5KoMgW40LZ69GK03ee2Cz9fcMHztU",
+  authDomain: "contapyme-e7bbe.firebaseapp.com",
+  projectId: "contapyme-e7bbe",
+  storageBucket: "contapyme-e7bbe.firebasestorage.app",
+  messagingSenderId: "671689558066",
+  appId: "1:671689558066:web:813bd7fba6aba58146942b"
+};
+// ═══════════════════════════════════════════════════
+
+let app, db, storage, auth;
+try {
+  app = initializeApp(firebaseConfig);
+  db = getFirestore(app);
+  storage = getStorage(app);
+  auth = getAuth(app);
+  window.FB = { db, storage, auth, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, setDoc, onSnapshot, query, orderBy, where, ref, uploadBytes, getDownloadURL, signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword };
+  window.FB_CONFIG_OK = true;
+  window.FB_READY = true;
+} catch(e) {
+  window.FB_READY = false;
+  window.FB_CONFIG_OK = false;
+}
+document.dispatchEvent(new Event('fb-ready'));
+</script>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     INSTRUCCIONES FIREBASE:
+     1. Ve a console.firebase.google.com → Crear proyecto "ContaPYME"
+     2. Firestore Database → Crear → Modo prueba → nam5
+     3. Authentication → Email/contraseña → Habilitar
+     4. Storage → Comenzar → Modo prueba
+     5. Configuración del proyecto → Agregar app web → Copiar firebaseConfig
+     6. En el sistema: clic en "⚙ Firebase" → pegar las credenciales
+     ═══════════════════════════════════════════════════════════════ -->
+<style>
+:root {
+  --bg:#f0ede8; --bg2:#ffffff; --bg3:#e8e4dd; --bg4:#ddd9d0;
+  --acc:#0f2d4a; --acc2:#c8832e; --acc3:#1e5c3a; --acc4:#b83030; --acc5:#5c2d8a; --acc6:#0a6080;
+  --txt:#181828; --txt2:#52526a; --txt3:#9090a8;
+  --brd:#dbd6ce; --brd2:#c8c2b8;
+  --r:10px; --r2:7px; --r3:4px;
+  --ff:'DM Sans',sans-serif; --fh:'Syne',sans-serif; --fm:'JetBrains Mono',monospace;
+  --sh:0 1px 10px rgba(15,45,74,.07); --sh2:0 6px 28px rgba(15,45,74,.13); --sh3:0 16px 56px rgba(15,45,74,.18);
+  --sw:256px;
+  --sidebar-bg: linear-gradient(180deg, #0f2d4a 0%, #0a2038 60%, #071525 100%);
+}
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0 }
+html, body { height:100%; background:var(--bg); color:var(--txt); font-family:var(--ff); font-size:14px; line-height:1.6; -webkit-font-smoothing:antialiased }
+::-webkit-scrollbar { width:4px; height:4px }
+::-webkit-scrollbar-thumb { background:var(--brd2); border-radius:2px }
+
+/* ── LOGIN ── */
+.login-wrap { min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--acc); position:relative; overflow:hidden }
+.login-wrap::before { content:''; position:absolute; inset:0; background:repeating-linear-gradient(45deg,transparent,transparent 40px,rgba(255,255,255,.015) 40px,rgba(255,255,255,.015) 80px) }
+.login-wrap::after { content:''; position:absolute; bottom:-120px; right:-120px; width:400px; height:400px; border-radius:50%; background:radial-gradient(circle,rgba(200,131,46,.18),transparent 70%) }
+.login-box { background:white; border-radius:16px; padding:44px 40px; width:420px; position:relative; z-index:1; box-shadow:var(--sh3); animation:fadeUp .4s ease }
+.login-brand { display:flex; align-items:center; gap:13px; margin-bottom:32px }
+.login-icon { width:50px; height:50px; background:var(--acc); border-radius:13px; display:flex; align-items:center; justify-content:center; font-size:22px; color:white; flex-shrink:0 }
+.login-brand-name { font-family:var(--fh); font-size:20px; font-weight:800; color:var(--acc) }
+.login-brand-sub { font-size:11px; color:var(--txt3) }
+.login-title { font-family:var(--fh); font-size:24px; font-weight:800; margin-bottom:5px }
+.login-sub { font-size:13px; color:var(--txt2); margin-bottom:26px }
+.login-demo { margin-top:14px; padding:11px 14px; background:var(--bg3); border-radius:var(--r2); font-size:12px; color:var(--txt2); text-align:center }
+.login-demo strong { color:var(--acc) }
+
+/* ── SHELL ── */
+.shell { display:flex; height:100vh; overflow:hidden }
+.main-area { flex:1; display:flex; flex-direction:column; overflow:hidden; min-width:0 }
+.content { flex:1; overflow-y:auto; background:var(--bg) }
+.module { padding:26px 30px; max-width:1500px; margin:0 auto; animation:fadeUp .22s ease }
+@keyframes fadeUp { from { opacity:0; transform:translateY(5px) } to { opacity:1; transform:none } }
+
+/* ── SIDEBAR ── */
+.sidebar { width:var(--sw); background:var(--sidebar-bg); display:flex; flex-direction:column; flex-shrink:0; position:relative }
+.sidebar::after { content:''; position:absolute; bottom:0; left:0; right:0; height:200px; background:radial-gradient(ellipse at bottom,rgba(200,131,46,.08),transparent 70%); pointer-events:none }
+.sb-brand { padding:20px 16px 16px; border-bottom:1px solid rgba(255,255,255,.08); display:flex; align-items:center; gap:11px }
+.sb-logo { width:36px; height:36px; background:var(--acc2); border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:800; color:white; flex-shrink:0 }
+.sb-name { font-family:var(--fh); font-size:14px; font-weight:700; color:white; letter-spacing:.3px }
+.sb-ver { font-size:10px; color:rgba(255,255,255,.35); font-family:var(--fm) }
+.sb-cli-wrap { padding:10px 8px; border-bottom:1px solid rgba(255,255,255,.06) }
+.sb-cli-lbl { font-size:9px; color:rgba(255,255,255,.3); text-transform:uppercase; letter-spacing:1.2px; margin-bottom:5px; display:block }
+.sb-cli-sel { width:100%; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14); border-radius:var(--r2); padding:7px 11px; color:white; font-family:var(--ff); font-size:12px; outline:none; cursor:pointer }
+.sb-cli-sel option { background:#0f2d4a }
+.sb-nav { flex:1; padding:10px 8px; display:flex; flex-direction:column; gap:1px; overflow-y:auto }
+.nav-grp { font-size:9px; font-weight:700; color:rgba(255,255,255,.25); letter-spacing:1.4px; padding:10px 10px 4px; text-transform:uppercase }
+.nav-btn { width:100%; display:flex; align-items:center; gap:9px; padding:9px 11px; border-radius:var(--r2); background:transparent; border:none; color:rgba(255,255,255,.55); font-family:var(--ff); font-size:12.5px; font-weight:500; cursor:pointer; transition:.13s; text-align:left }
+.nav-btn:hover { background:rgba(255,255,255,.09); color:rgba(255,255,255,.9) }
+.nav-btn.active { background:rgba(255,255,255,.15); color:white; font-weight:600 }
+.nav-ic { font-size:14px; width:18px; text-align:center; flex-shrink:0 }
+.nav-lbl { flex:1 }
+.nav-badge { font-size:10px; font-weight:700; padding:1px 7px; border-radius:10px; background:var(--acc2); color:white; flex-shrink:0 }
+.sb-footer { padding:12px 8px; border-top:1px solid rgba(255,255,255,.07); position:relative; z-index:1 }
+.sb-user { display:flex; align-items:center; gap:9px; padding:9px 11px; background:rgba(255,255,255,.07); border-radius:var(--r2); margin-bottom:7px }
+.sb-avatar { width:30px; height:30px; background:var(--acc2); border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:var(--fh); font-size:13px; font-weight:700; color:white; flex-shrink:0 }
+.sb-uname { font-size:12px; font-weight:600; color:white }
+.sb-urole { font-size:10px; color:rgba(255,255,255,.4) }
+.sb-logout { width:100%; padding:7px 11px; background:rgba(255,255,255,.06); border:none; border-radius:var(--r2); color:rgba(255,255,255,.5); font-family:var(--ff); font-size:12px; cursor:pointer; transition:.13s; display:flex; align-items:center; gap:7px }
+.sb-logout:hover { background:rgba(200,50,50,.2); color:#ffaaaa }
+
+/* ── TOPBAR ── */
+.topbar { background:var(--bg2); border-bottom:1px solid var(--brd); padding:12px 26px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; box-shadow:var(--sh) }
+.tb-left { display:flex; align-items:center; gap:12px }
+.tb-mod { font-family:var(--fh); font-size:15px; font-weight:700; color:var(--acc) }
+.tb-chip { font-size:11px; font-weight:700; padding:3px 11px; border-radius:20px; background:#fdeede; color:var(--acc2) }
+.tb-ruc { font-size:11px; color:var(--txt3) }
+.tb-right { display:flex; align-items:center; gap:9px }
+.tb-periodo { background:var(--bg3); border:1.5px solid var(--brd); border-radius:var(--r2); padding:6px 11px; font-family:var(--ff); font-size:12px; color:var(--txt); outline:none; cursor:pointer }
+.tb-periodo:focus { border-color:var(--acc) }
+.online-dot { width:7px; height:7px; background:#2ecc71; border-radius:50%; animation:pulse 2s infinite }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* ── PAGE HEADER ── */
+.ph { margin-bottom:20px }
+.ph-row { display:flex; justify-content:space-between; align-items:flex-start; gap:14px }
+.ph h1 { font-family:var(--fh); font-size:22px; font-weight:800; color:var(--acc) }
+.ph p { color:var(--txt2); font-size:12.5px; margin-top:3px }
+
+/* ── STATS GRID ── */
+.sg { display:grid; grid-template-columns:repeat(auto-fit,minmax(155px,1fr)); gap:11px; margin-bottom:18px }
+.sc { background:var(--bg2); border:1px solid var(--brd); border-radius:var(--r); padding:14px 16px; border-left:4px solid var(--ac,var(--acc)); box-shadow:var(--sh); transition:.15s; cursor:default }
+.sc:hover { transform:translateY(-2px); box-shadow:var(--sh2) }
+.sl { font-size:10px; color:var(--txt2); text-transform:uppercase; letter-spacing:.9px; margin-bottom:4px; font-weight:700 }
+.sv { font-size:20px; font-weight:800; color:var(--acc); font-family:var(--fh) }
+.sd { font-size:11px; color:var(--txt3); margin-top:2px }
+
+/* ── CARDS ── */
+.card { background:var(--bg2); border:1px solid var(--brd); border-radius:var(--r); padding:18px; box-shadow:var(--sh) }
+.ch { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px }
+.ct { font-family:var(--fh); font-size:13.5px; font-weight:700; color:var(--acc) }
+
+/* ── TABLE ── */
+.tw { overflow-x:auto }
+table { width:100%; border-collapse:collapse; font-size:12.5px }
+thead th { padding:8px 12px; text-align:left; font-size:10px; font-weight:700; color:var(--txt2); text-transform:uppercase; letter-spacing:.8px; border-bottom:2px solid var(--brd); background:var(--bg3); white-space:nowrap }
+thead th.r { text-align:right }
+tbody tr { border-bottom:1px solid var(--brd); transition:background .1s }
+tbody tr:hover { background:var(--bg3) }
+tbody td { padding:9px 12px; vertical-align:middle }
+tbody tr:last-child { border-bottom:none }
+tfoot td { padding:9px 12px; font-weight:700; background:var(--bg3); border-top:2px solid var(--brd2) }
+.r { text-align:right }
+.mono { font-family:var(--fm) }
+.strong { font-weight:700 }
+
+/* ── BADGES ── */
+.badge { display:inline-flex; align-items:center; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:700; letter-spacing:.2px }
+.bs { background:#d4edda; color:#155724 }
+.bd { background:#f8d7da; color:#721c24 }
+.bw { background:#fff3cd; color:#856404 }
+.bi { background:#d1ecf1; color:#0c5460 }
+.bm { background:var(--bg3); color:var(--txt2) }
+.bp { background:#e8d5f5; color:#5a2d82 }
+.bo { background:#fdeede; color:#855a00 }
+
+/* ── BUTTONS ── */
+.btn { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:var(--r2); font-family:var(--ff); font-size:12.5px; font-weight:600; cursor:pointer; border:none; transition:.15s; white-space:nowrap; text-decoration:none }
+.btn-p { background:var(--acc); color:white }
+.btn-p:hover { background:#07192b; transform:translateY(-1px); box-shadow:0 4px 14px rgba(15,45,74,.22) }
+.btn-g { background:transparent; color:var(--txt2); border:1.5px solid var(--brd2) }
+.btn-g:hover { background:var(--bg3); color:var(--txt); border-color:var(--acc) }
+.btn-gold { background:var(--acc2); color:white }
+.btn-gold:hover { background:#a86820 }
+.btn-green { background:var(--acc3); color:white }
+.btn-green:hover { background:#164d2e }
+.btn-d { background:#fff0f0; color:var(--acc4); border:1px solid #ffd0d0 }
+.btn-d:hover { background:#ffe4e4 }
+.btn-teal { background:var(--acc6); color:white }
+.btn-teal:hover { background:#084f68 }
+.btn-s { padding:5px 11px; font-size:12px }
+.btn:disabled { opacity:.4; cursor:not-allowed; transform:none !important }
+
+/* ── FORMS ── */
+.fg { margin-bottom:12px }
+.fl { display:block; font-size:10.5px; font-weight:700; color:var(--txt2); margin-bottom:4px; text-transform:uppercase; letter-spacing:.5px }
+.fi, .fsel, .fta { width:100%; background:var(--bg); border:1.5px solid var(--brd); border-radius:var(--r2); padding:8px 12px; color:var(--txt); font-family:var(--ff); font-size:13px; outline:none; transition:.15s }
+.fi:focus, .fsel:focus, .fta:focus { border-color:var(--acc); box-shadow:0 0 0 3px rgba(15,45,74,.07) }
+.fi[readonly] { background:var(--bg3); color:var(--txt2) }
+.fsel option { background:white }
+.fta { resize:vertical; min-height:60px }
+.fg2 { display:grid; grid-template-columns:1fr 1fr; gap:11px }
+.fg3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:11px }
+.fg4 { display:grid; grid-template-columns:repeat(4,1fr); gap:11px }
+.span2 { grid-column:span 2 }
+.span3 { grid-column:span 3 }
+
+/* ── MODAL ── */
+.overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:1000; animation:fIn .15s ease }
+@keyframes fIn { from{opacity:0} to{opacity:1} }
+.modal { background:white; border-radius:14px; padding:26px; width:90%; max-width:560px; max-height:92vh; overflow-y:auto; animation:sUp .2s cubic-bezier(.34,1.56,.64,1); box-shadow:var(--sh3) }
+.modal-lg { max-width:820px }
+.modal-xl { max-width:1080px }
+@keyframes sUp { from{opacity:0;transform:translateY(12px) scale(.97)} to{opacity:1;transform:none} }
+.mh { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; padding-bottom:14px; border-bottom:2px solid var(--brd) }
+.mt { font-family:var(--fh); font-size:17px; font-weight:800; color:var(--acc) }
+.mf { display:flex; justify-content:flex-end; gap:9px; margin-top:18px; padding-top:15px; border-top:1px solid var(--brd) }
+
+/* ── TOOLBAR ── */
+.toolbar { display:flex; align-items:center; gap:9px; margin-bottom:13px; flex-wrap:wrap }
+.si { position:relative; min-width:150px; max-width:260px; flex:1 }
+.sic { position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--txt3); font-size:13px; pointer-events:none }
+.sin { width:100%; background:var(--bg); border:1.5px solid var(--brd); border-radius:var(--r2); padding:8px 12px 8px 32px; color:var(--txt); font-family:var(--ff); font-size:13px; outline:none; transition:.15s }
+.sin:focus { border-color:var(--acc) }
+
+/* ── TABS ── */
+.tabs { display:flex; gap:0; margin-bottom:16px; border-bottom:2px solid var(--brd); overflow-x:auto }
+.tab { padding:8px 16px; border:none; background:transparent; font-family:var(--ff); font-size:12.5px; font-weight:600; color:var(--txt2); cursor:pointer; transition:.13s; border-bottom:2px solid transparent; margin-bottom:-2px; white-space:nowrap; flex-shrink:0 }
+.tab:hover { color:var(--acc) }
+.tab.active { color:var(--acc); border-bottom-color:var(--acc) }
+
+/* ── GRIDS ── */
+.g2 { display:grid; grid-template-columns:1fr 1fr; gap:16px }
+.g3 { display:grid; grid-template-columns:repeat(3,1fr); gap:14px }
+.g4 { display:grid; grid-template-columns:repeat(4,1fr); gap:12px }
+
+/* ── EMPTY ── */
+.empty { text-align:center; padding:44px 20px; color:var(--txt3) }
+.empty .ei { font-size:44px; margin-bottom:9px }
+
+/* ── NOTIF ── */
+.notifs { position:fixed; top:18px; right:18px; z-index:9999; display:flex; flex-direction:column; gap:7px; pointer-events:none }
+.notif { background:white; border:1px solid var(--brd); border-radius:var(--r); padding:11px 16px; font-size:13px; display:flex; align-items:center; gap:9px; box-shadow:var(--sh2); animation:sUp .18s ease; min-width:240px; font-weight:500; pointer-events:auto }
+.notif.ok { border-left:4px solid var(--acc3) }
+.notif.err { border-left:4px solid var(--acc4) }
+.notif.info { border-left:4px solid var(--acc) }
+
+/* ── CLIENTE CARD ── */
+.cli-card { background:var(--bg2); border:1.5px solid var(--brd); border-radius:var(--r); padding:17px; cursor:pointer; transition:.17s; position:relative; overflow:hidden }
+.cli-card::before { content:''; position:absolute; top:0; left:0; width:4px; height:100%; background:var(--rc, var(--acc)) }
+.cli-card:hover { border-color:var(--acc); box-shadow:var(--sh2); transform:translateY(-2px) }
+.cc-name { font-family:var(--fh); font-size:13.5px; font-weight:700; color:var(--acc) }
+.cc-ruc { font-size:11.5px; color:var(--txt3); font-family:var(--fm); margin-top:2px }
+.cc-body { display:flex; flex-direction:column; gap:4px; margin:10px 0 }
+.cc-row { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--txt2) }
+.cc-ft { display:flex; align-items:center; justify-content:space-between; padding-top:10px; border-top:1px solid var(--brd); margin-top:2px }
+
+/* ── ASIENTO PREVIEW ── */
+.ap-box { background:var(--bg3); border-radius:var(--r2); padding:14px; margin-top:12px; border:1px solid var(--brd) }
+.ap-hdr { font-size:10px; font-weight:700; color:var(--txt2); text-transform:uppercase; letter-spacing:.9px; margin-bottom:9px }
+.ap-row { display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid var(--brd); font-size:12px }
+.ap-row:last-of-type { border-bottom:none }
+.ap-cta { font-family:var(--fm); font-weight:700; color:var(--acc); width:44px; flex-shrink:0 }
+.ap-nom { flex:1; color:var(--txt) }
+.ap-D { width:95px; text-align:right; font-family:var(--fm); color:var(--acc3); font-weight:600 }
+.ap-H { width:95px; text-align:right; font-family:var(--fm); color:var(--acc4); font-weight:600 }
+.ap-tot { display:flex; justify-content:space-between; margin-top:8px; padding-top:7px; border-top:2px solid var(--brd2); font-weight:800; font-family:var(--fm); font-size:12.5px }
+
+/* ── ASIENTO CARD ── */
+.asiento-card { background:var(--bg2); border:1px solid var(--brd); border-radius:var(--r); margin-bottom:10px; overflow:hidden; transition:.15s }
+.asiento-card:hover { border-color:var(--acc); box-shadow:var(--sh) }
+.as-hdr { padding:11px 16px; background:var(--bg3); display:flex; align-items:center; gap:10px; cursor:pointer; user-select:none }
+.as-num { font-family:var(--fm); font-size:11px; font-weight:700; color:var(--acc); background:rgba(15,45,74,.1); padding:2px 9px; border-radius:20px; flex-shrink:0 }
+.as-glosa { font-size:13px; font-weight:600; flex:1 }
+.as-fecha { font-size:11px; color:var(--txt2); font-family:var(--fm); flex-shrink:0 }
+.as-body { display:none; padding:12px 16px }
+.as-body.open { display:block }
+.as-table { width:100%; border-collapse:collapse; font-size:12.5px }
+.as-table th { padding:6px 10px; text-align:left; font-size:10px; font-weight:700; color:var(--txt2); text-transform:uppercase; letter-spacing:.8px; border-bottom:2px solid var(--brd); background:var(--acc); color:white }
+.as-table th.r { text-align:right }
+.as-table td { padding:7px 10px; border-bottom:1px solid var(--brd) }
+.as-table tfoot td { background:var(--bg3); font-weight:700; border-top:2px solid var(--brd2) }
+.as-D { color:var(--acc3) }
+.as-H { color:var(--acc4) }
+
+/* ── PDT BOX ── */
+.pdt-box { background:linear-gradient(135deg,var(--acc),#071525); border-radius:var(--r); padding:20px 24px; color:white; margin-bottom:14px }
+.pdt-title { font-family:var(--fh); font-size:15px; font-weight:700; margin-bottom:12px; display:flex; align-items:center; gap:8px }
+.pdt-section { font-size:10px; opacity:.5; text-transform:uppercase; letter-spacing:.9px; margin:12px 0 6px }
+.pdt-row { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid rgba(255,255,255,.09); font-size:13px }
+.pdt-row:last-child { border-bottom:none }
+.pdt-row.total { border-top:2px solid rgba(255,255,255,.25); margin-top:7px; padding-top:11px; font-size:15px; font-weight:800 }
+.pdt-lbl { opacity:.75 }
+.pdt-val { font-family:var(--fm); font-weight:700 }
+.pdt-val.pos { color:#86efac }
+.pdt-val.neg { color:#fca5a5 }
+
+/* ── PROG BAR ── */
+.prog { background:var(--bg3); border-radius:3px; height:7px; overflow:hidden; margin-top:6px }
+.prog-fill { height:100%; border-radius:3px; transition:.4s }
+
+/* ── DETAIL HEADER ── */
+.det-hdr { background:var(--acc); border-radius:var(--r); padding:22px 24px; color:white; margin-bottom:18px; display:flex; align-items:center; justify-content:space-between }
+.dh-av { width:50px; height:50px; background:rgba(255,255,255,.18); border-radius:12px; display:flex; align-items:center; justify-content:center; font-family:var(--fh); font-size:22px; font-weight:800; flex-shrink:0 }
+.dh-name { font-family:var(--fh); font-size:19px; font-weight:800 }
+.dh-ruc { font-size:12px; opacity:.7; font-family:var(--fm); margin-top:2px }
+.dh-badges { display:flex; gap:7px; margin-top:6px }
+.dh-badge { font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px; background:rgba(255,255,255,.18); color:white }
+
+/* ── IMPORTAR ZONA ── */
+.import-zone { border:2px dashed var(--brd2); border-radius:var(--r); padding:28px; text-align:center; cursor:pointer; transition:.17s; background:var(--bg3) }
+.import-zone:hover, .import-zone.drag { border-color:var(--acc); background:#f0f3ff }
+.iz-icon { font-size:32px; margin-bottom:8px }
+
+/* ── FIREBASE BANNER ── */
+.fb-banner { background:#fff8e1; border:2px solid #ffc107; border-radius:var(--r); padding:14px 18px; display:flex; align-items:flex-start; gap:12px; margin-bottom:18px }
+.fb-banner-icon { font-size:22px; flex-shrink:0 }
+.fb-banner-title { font-weight:700; font-size:13px; margin-bottom:3px }
+.fb-banner-text { font-size:12px; color:var(--txt2) }
+
+/* ── PROVISIÓN CARD ── */
+.prov-card { background:var(--bg2); border:1.5px solid var(--brd); border-radius:var(--r); padding:16px; transition:.15s; border-left:4px solid var(--pc,var(--acc)); cursor:pointer }
+.prov-card:hover { box-shadow:var(--sh2); transform:translateY(-2px) }
+
+/* ── REGIME COLORS ── */
+.reg-RG { --rc:#0f2d4a } .reg-RMT { --rc:#1e5c3a } .reg-RS { --rc:#5c2d8a } .reg-RUS { --rc:#c8832e }
+
+@media (max-width:768px) {
+  :root { --sw:0px }
+  .sidebar { display:none }
+  .g2, .g3, .g4 { grid-template-columns:1fr }
+  .module { padding:14px 15px }
+  .fg2, .fg3, .fg4 { grid-template-columns:1fr }
+  .span2, .span3 { grid-column:1 }
+}
+</style>
+<script>
+// ══════════════════════════════════════════════════════
+// CONSTANTES LEGALES PERÚ 2026
+// ══════════════════════════════════════════════════════
+const RMV=1025, UIT=5350;
+const ESSALUD=0.09;
+const AFP_RATES={ Prima:{ap:0.10,seg:0.0174,com:0.016}, Integra:{ap:0.10,seg:0.0155,com:0.0155}, Habitat:{ap:0.10,seg:0.0147,com:0.0138}, Profuturo:{ap:0.10,seg:0.0117,com:0.021}, ONP:{ap:0.13,seg:0,com:0} };
+const IGV_RATE=0.18;
+
+// ══════════════════════════════════════════════════════
+// ESTADO GLOBAL
+// ══════════════════════════════════════════════════════
+const ST = {
+  user: null, userName: 'Contadora', userRole: 'admin',
+  fbReady: false, fbOk: false,
+  clientes: [], clienteActivo: null,
+  periodoActivo: '2026-03',
+  currentMod: 'dashboard',
+  // datos por cliente (cacheados)
+  _data: {}
+};
+
+// ══════════════════════════════════════════════════════
+// DATOS DEMO
+// ══════════════════════════════════════════════════════
+function initDemoData() {
+  ST.clientes = [
+    { id:'c1', razonSocial:'Tech Solutions SAC', ruc:'20123456789', regimen:'RG', email:'contacto@tech.pe', telefono:'01-4445566', responsable:'Carlos Mendoza', periodoInicio:'2024-01', activo:true },
+    { id:'c2', razonSocial:'Comercial Flores EIRL', ruc:'20987654321', regimen:'RMT', email:'flores@gmail.com', telefono:'999111222', responsable:'Juan Flores', periodoInicio:'2023-06', activo:true },
+    { id:'c3', razonSocial:'Servicios López SRL', ruc:'20456789123', regimen:'RS', email:'lopez@empresa.pe', telefono:'01-3334455', responsable:'Ana López', periodoInicio:'2024-03', activo:true },
+  ];
+  ST.clienteActivo = 'c1';
+
+  ST._data = {
+    c1: {
+      trabajadores: [
+        { id:'t1', nombre:'Carlos Mendoza Torres', cargo:'Gerente General', remuneracion:8000, afp:'Prima', regLaboral:'general' },
+        { id:'t2', nombre:'Ana García López', cargo:'Contadora', remuneracion:4500, afp:'Integra', regLaboral:'general' },
+        { id:'t3', nombre:'Luis Quispe Ramos', cargo:'Asistente TI', remuneracion:3200, afp:'Habitat', regLaboral:'general' },
+        { id:'t4', nombre:'María Flores Díaz', cargo:'Secretaria', remuneracion:1800, afp:'ONP', regLaboral:'general' },
+      ],
+      ventas: [
+        { id:'v1', fecha:'2026-03-02', tipoDoc:'01', serie:'F001', numero:'0125', rucCli:'20112233445', cliente:'Tech Corp SAC', base:5800, igv:1044, total:6844, estado:'aceptado' },
+        { id:'v2', fecha:'2026-03-05', tipoDoc:'01', serie:'F001', numero:'0126', rucCli:'20998877665', cliente:'Retail Group', base:3200, igv:576, total:3776, estado:'aceptado' },
+        { id:'v3', fecha:'2026-03-08', tipoDoc:'01', serie:'F001', numero:'0127', rucCli:'20456789012', cliente:'Importadora XYZ', base:9500, igv:1710, total:11210, estado:'aceptado' },
+      ],
+      compras: [
+        { id:'c1', fecha:'2026-03-02', tipoDoc:'01', serie:'F001', numero:'001', rucProv:'20111222333', proveedor:'Alquiler Oficinas SAC', base:2500, igv:450, total:2950, credito:true },
+        { id:'c2', fecha:'2026-03-03', tipoDoc:'01', serie:'RH01', numero:'001', rucProv:'20444555666', proveedor:'Asesor Legal EIRL', base:1200, igv:216, total:1416, credito:true },
+        { id:'c3', fecha:'2026-03-04', tipoDoc:'01', serie:'F002', numero:'045', rucProv:'20777888999', proveedor:'AWS Perú SAC', base:850, igv:153, total:1003, credito:true },
+      ],
+      activos: [
+        { id:'a1', desc:'Laptop HP EliteBook', cat:'Equipos de Cómputo', valor:4500, fecha:'2024-01-15', vida:4, acum:562.50 },
+        { id:'a2', desc:'Vehículo Toyota Yaris', cat:'Unidades de Transporte', valor:58000, fecha:'2023-06-01', vida:5, acum:9666.67 },
+        { id:'a3', desc:'Muebles de Oficina', cat:'Muebles y Enseres', valor:8500, fecha:'2023-01-10', vida:10, acum:2125.00 },
+      ],
+      incobrables: [
+        { id:'i1', cliente:'Distribuidora Lima SRL', ruc:'20333222111', monto:4500, fechaVenc:'2025-09-15', dias:175 },
+        { id:'i2', cliente:'Comercio Andes SAC', ruc:'20444333222', monto:1200, fechaVenc:'2025-11-30', dias:99 },
+      ],
+      asientos: [
+        { id:'A001', fecha:'2026-03-02', numero:'001', glosa:'Venta F001-0125 - Tech Corp SAC', partidas:[
+          {cta:'121',nom:'Fact. por cobrar',D:6844,H:0},{cta:'704',nom:'Ventas - Servicios',D:0,H:5800},{cta:'4011',nom:'IGV por pagar',D:0,H:1044}]},
+        { id:'A002', fecha:'2026-03-03', numero:'002', glosa:'Compra servicios - Asesor Legal', partidas:[
+          {cta:'632',nom:'Asesoría y consultoría',D:1200,H:0},{cta:'4011',nom:'IGV crédito fiscal',D:216,H:0},{cta:'421',nom:'Fact. por pagar',D:0,H:1416}]},
+        { id:'A003', fecha:'2026-03-05', numero:'003', glosa:'Provisión planilla Marzo 2026', partidas:[
+          {cta:'621',nom:'Remuneraciones',D:17500,H:0},{cta:'627',nom:'ESSALUD (9%)',D:1575,H:0},{cta:'411',nom:'Remuneraciones por pagar',D:0,H:15925},{cta:'401',nom:'AFP/ONP por pagar',D:0,H:3150}]},
+      ],
+      declaraciones: [
+        { id:'d1', tipo:'PDT 621', periodo:'2026-02', vencimiento:'2026-03-17', estado:'presentada', igv:2850, renta:450, notas:'OK' },
+        { id:'d2', tipo:'PDT 601', periodo:'2026-02', vencimiento:'2026-03-20', estado:'presentada', igv:0, renta:2340, notas:'Planilla 4 trabajadores' },
+        { id:'d3', tipo:'PDT 621', periodo:'2026-03', vencimiento:'2026-04-15', estado:'pendiente', igv:0, renta:0, notas:'' },
+      ]
+    },
+    c2: { trabajadores:[{id:'t1',nombre:'Jorge Flores H.',cargo:'Gerente',remuneracion:3500,afp:'Prima',regLaboral:'general'}], ventas:[], compras:[], activos:[], incobrables:[], asientos:[], declaraciones:[] },
+    c3: { trabajadores:[], ventas:[], compras:[], activos:[], incobrables:[], asientos:[], declaraciones:[] },
+  };
+}
+
+// ══════════════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════════════
+const $ = id => document.getElementById(id);
+const esc = s => String(s||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const fmt = n => new Intl.NumberFormat('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}).format(n||0);
+const S = n => 'S/\u00a0' + fmt(n);
+const today = () => new Date().toISOString().split('T')[0];
+const diasHasta = d => { if(!d) return 999; const h=new Date(); h.setHours(0,0,0,0); return Math.ceil((new Date(d+'T00:00:00')-h)/86400000); };
+const regLabel = r => ({RG:'Régimen General',RMT:'MYPE Tributario',RS:'Régimen Especial',RUS:'RUS'}[r]||r);
+const regColor = r => ({RG:'#0f2d4a',RMT:'#1e5c3a',RS:'#5c2d8a',RUS:'#c8832e'}[r]||'#0f2d4a');
+
+function notify(msg, type='ok') {
+  const d=document.createElement('div'); d.className=`notif ${type}`;
+  d.innerHTML=`<span>${type==='ok'?'✓':type==='err'?'✕':'ℹ'}</span> ${esc(msg)}`;
+  $('notifs').appendChild(d); setTimeout(()=>d.remove(),3500);
+}
+function closeModal() { $('modal-root').innerHTML=''; }
+
+// Data accessors
+const getData = (key) => (ST._data[ST.clienteActivo]||{})[key]||[];
+const setData = (key,val) => { if(!ST._data[ST.clienteActivo]) ST._data[ST.clienteActivo]={}; ST._data[ST.clienteActivo][key]=val; };
+
+// Calc trabajador
+function calcTrab(t) {
+  const s=t.remuneracion, afp=AFP_RATES[t.afp]||AFP_RATES.Prima, isMype=t.regLaboral==='mype';
+  const essalud=s*ESSALUD, descTrab=s*(afp.ap+afp.seg+afp.com), neto=s-descTrab;
+  const cts=isMype?(s*0.5/12):(s+essalud)/12;
+  const vac=isMype?(s*0.5/12):(s/12);
+  const grati=isMype?0:(s/6);
+  const bonifExtra=isMype?0:(grati*0.09);
+  return { s, essalud, descTrab, neto, cts, vac, grati, bonifExtra, costo:s+essalud+cts+vac+grati+bonifExtra, isMype };
+}
+function calcPlanillaTotal() {
+  return getData('trabajadores').reduce((a,t)=>{ const c=calcTrab(t); return {sueldos:a.sueldos+c.s,essalud:a.essalud+c.essalud,cts:a.cts+c.cts,vac:a.vac+c.vac,grati:a.grati+c.grati,bonif:a.bonif+c.bonifExtra,costo:a.costo+c.costo,desc:a.desc+c.descTrab}; },{sueldos:0,essalud:0,cts:0,vac:0,grati:0,bonif:0,costo:0,desc:0});
+}
+function calcDepAct(a) {
+  const m=a.valor/a.vida/12, acum=a.acum+m, neto=a.valor-acum, meses=Math.max(0,a.vida*12-Math.round(a.acum/m)||0);
+  return { m, anual:a.valor/a.vida, acum, neto, meses };
+}
+function calcImpuestos() {
+  const vs=getData('ventas'), cs=getData('compras');
+  const bV=vs.reduce((s,v)=>s+v.base,0), igvV=vs.reduce((s,v)=>s+v.igv,0);
+  const igvC=cs.filter(c=>c.credito).reduce((s,c)=>s+c.igv,0);
+  const igvP=Math.max(0,igvV-igvC);
+  const cl=ST.clientes.find(c=>c.id===ST.clienteActivo)||{};
+  const coef=cl.regimen==='RG'?0.015:cl.regimen==='RMT'?0.01:0;
+  const pagoCta=bV*coef;
+  return {bV,igvV,igvC,igvP,coef,pagoCta,total:igvP+pagoCta};
+}
+function provIncob(i) { const d=i.dias; return i.monto*(d>=360?.6:d>=181?.2:d>=91?.1:d>=30?.05:0); }
+
+// Build asientos
+function buildAsientoPlanilla() {
+  const p=calcPlanillaTotal();
+  const ps=[];
+  if(p.sueldos) ps.push({cta:'621',nom:'Remuneraciones',D:p.sueldos,H:0});
+  if(p.essalud) ps.push({cta:'627',nom:'ESSALUD (9%)',D:p.essalud,H:0});
+  if(p.cts) ps.push({cta:'625',nom:'Provisión CTS',D:p.cts,H:0});
+  if(p.vac) ps.push({cta:'621',nom:'Provisión vacaciones',D:p.vac,H:0});
+  if(p.grati) ps.push({cta:'621',nom:'Provisión gratificaciones',D:p.grati,H:0});
+  if(p.bonif) ps.push({cta:'621',nom:'Bonificación ext. 9%',D:p.bonif,H:0});
+  if(p.sueldos-p.desc>0) ps.push({cta:'411',nom:'Rem. por pagar',D:0,H:p.sueldos-p.desc});
+  if(p.desc) ps.push({cta:'401',nom:'AFP/ONP por pagar',D:0,H:p.desc});
+  if(p.essalud) ps.push({cta:'401',nom:'ESSALUD por pagar',D:0,H:p.essalud});
+  if(p.cts) ps.push({cta:'415',nom:'CTS por depositar',D:0,H:p.cts});
+  if(p.vac) ps.push({cta:'415',nom:'Vacaciones por pagar',D:0,H:p.vac});
+  if(p.grati+p.bonif) ps.push({cta:'415',nom:'Gratificaciones por pagar',D:0,H:p.grati+p.bonif});
+  return ps;
+}
+function buildAsientoImpuestos() {
+  const i=calcImpuestos();
+  return [{cta:'641',nom:'IGV - Débito fiscal neto',D:i.igvP,H:0},{cta:'641',nom:'IR - Pago a cuenta',D:i.pagoCta,H:0},{cta:'4011',nom:'IGV por pagar',D:0,H:i.igvP},{cta:'4017',nom:'IR por pagar',D:0,H:i.pagoCta}];
+}
+function buildAsientoDeprec() {
+  const total=getData('activos').reduce((s,a)=>s+calcDepAct(a).m,0);
+  if(!total) return [];
+  return [{cta:'681',nom:'Depreciación activos fijos',D:total,H:0},{cta:'393',nom:'Depreciación acumulada',D:0,H:total}];
+}
+function buildAsientoIncob() {
+  const total=getData('incobrables').reduce((s,i)=>s+provIncob(i),0);
+  if(!total) return [];
+  return [{cta:'684',nom:'Estimación cobranza dudosa',D:total,H:0},{cta:'191',nom:'Provisión cob. dudosa',D:0,H:total}];
+}
+
+function renderAPBox(partidas, titulo) {
+  if(!partidas.length) return '';
+  const tD=partidas.reduce((s,p)=>s+p.D,0), tH=partidas.reduce((s,p)=>s+p.H,0);
+  const ok=Math.abs(tD-tH)<0.01;
+  return `<div class="ap-box"><div class="ap-hdr">${esc(titulo)}</div>
+  ${partidas.map(p=>`<div class="ap-row"><span class="ap-cta">${p.cta}</span><span class="ap-nom">${esc(p.nom)}</span><span class="ap-D">${p.D>0?S(p.D):'—'}</span><span class="ap-H">${p.H>0?S(p.H):'—'}</span></div>`).join('')}
+  <div class="ap-tot"><span>${ok?'✓ CUADRA':'⚠ NO CUADRA'}</span><span><span style="color:var(--acc3)">${S(tD)}</span>&nbsp;/&nbsp;<span style="color:var(--acc4)">${S(tH)}</span></span></div></div>`;
+}
+
+// ══════════════════════════════════════════════════════
+// FIREBASE OPS
+// ══════════════════════════════════════════════════════
+async function fbSave(col, data) {
+  if(!ST.fbOk||!window.FB) return null;
+  try { const r=await window.FB.addDoc(window.FB.collection(window.FB.db,col),{...data,_ts:new Date()}); return r.id; } catch(e){notify('Firebase error: '+e.message,'err');return null;}
+}
+async function fbUpdate(col,id,data) { if(!ST.fbOk||!window.FB) return; try { await window.FB.updateDoc(window.FB.doc(window.FB.db,col,id),data); } catch(e){notify('Firebase error: '+e.message,'err');} }
+async function fbDelete(col,id) { if(!ST.fbOk||!window.FB) return; try { await window.FB.deleteDoc(window.FB.doc(window.FB.db,col,id)); } catch(e){notify('Firebase error: '+e.message,'err');} }
+async function fbGetAll(col) {
+  if(!ST.fbOk||!window.FB) return [];
+  try { const s=await window.FB.getDocs(window.FB.collection(window.FB.db,col)); return s.docs.map(d=>({id:d.id,...d.data()})); } catch(e){return [];}
+}
+
+// ══════════════════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════════════════
+function renderLogin() {
+  document.body.innerHTML = `<div class="notifs" id="notifs"></div><div id="modal-root"></div>
+  <div class="login-wrap">
+    <div class="login-box">
+      <div class="login-brand"><div class="login-icon">⚖</div><div><div class="login-brand-name">ContaGestión PRO</div><div class="login-brand-sub">Sistema Contable Integral · Perú 2026</div></div></div>
+      <div class="login-title">Iniciar sesión</div>
+      <div class="login-sub">Gestión contable profesional para tu estudio</div>
+      <div class="fg"><label class="fl">Correo electrónico</label><input class="fi" id="li-email" type="email" value="contadora@estudio.pe" placeholder="correo@dominio.com"/></div>
+      <div class="fg"><label class="fl">Contraseña</label><input class="fi" id="li-pass" type="password" value="demo123456" onkeydown="if(event.key==='Enter')doLogin()"/></div>
+      <button class="btn btn-p" style="width:100%;justify-content:center;padding:12px;font-size:14px" onclick="doLogin()" id="li-btn">Ingresar al sistema</button>
+      <div class="login-demo"><strong>Modo Demo activo</strong> — Datos de ejemplo precargados.<br/>Configura Firebase para almacenamiento en la nube → ⚙ Firebase.</div>
+    </div>
+  </div>`;
+}
+
+function doLogin() {
+  const email=$('li-email')?.value.trim(), pass=$('li-pass')?.value;
+  if(!email||!pass){notify('Completa email y contraseña','err');return;}
+  const btn=$('li-btn');
+
+  if(ST.fbOk && window.FB) {
+    btn.disabled=true; btn.textContent='Ingresando...';
+    window.FB.signInWithEmailAndPassword(window.FB.auth,email,pass)
+      .then(uc=>{ ST.user=uc.user; ST.userName=email.split('@')[0]; loadAllData().then(renderApp); })
+      .catch(e=>{notify('Error: '+e.message,'err');btn.disabled=false;btn.textContent='Ingresar al sistema';});
+  } else {
+    ST.user={email,uid:'demo'}; ST.userName=email.split('@')[0];
+    initDemoData(); renderApp();
+    notify('Bienvenida al sistema ✓');
+  }
+}
+
+function doLogout() {
+  if(ST.fbOk&&window.FB) window.FB.signOut(window.FB.auth);
+  ST.user=null; renderLogin();
+}
+
+async function loadAllData() {
+  notify('Cargando datos...','info');
+  // Load clientes from Firebase
+  const cls=await fbGetAll('clientes');
+  if(cls.length) ST.clientes=cls;
+  else initDemoData();
+  if(ST.clientes.length) ST.clienteActivo=ST.clientes[0].id;
+}
+
+// ══════════════════════════════════════════════════════
+// APP SHELL
+// ══════════════════════════════════════════════════════
+function renderApp() {
+  const pendDecl = (d=>d.filter(x=>x.estado==='pendiente'||x.estado==='en-proceso').length)(
+    ST.clientes.flatMap(c=>(ST._data[c.id]||{}).declaraciones||[])
+  );
+  const urgentes = ST.clientes.flatMap(c=>(ST._data[c.id]||{}).declaraciones||[]).filter(d=>diasHasta(d.vencimiento)<=5&&d.estado!=='presentada').length;
+
+  document.body.innerHTML = `
+  <div class="notifs" id="notifs"></div>
+  <div id="modal-root"></div>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="sb-brand">
+        <div class="sb-logo">⚖</div>
+        <div><div class="sb-name">ContaGestión PRO</div><div class="sb-ver">v3.0 · Perú 2026</div></div>
+      </div>
+      <div class="sb-cli-wrap">
+        <span class="sb-cli-lbl">Cliente activo</span>
+        <select class="sb-cli-sel" id="cli-sel" onchange="cambiarCliente(this.value)">
+          ${ST.clientes.map(c=>`<option value="${c.id}" ${c.id===ST.clienteActivo?'selected':''}>${esc(c.razonSocial)}</option>`).join('')}
+        </select>
+      </div>
+      <nav class="sb-nav">
+        <div class="nav-grp">Principal</div>
+        <button class="nav-btn ${ST.currentMod==='dashboard'?'active':''}" onclick="navTo('dashboard',this)"><span class="nav-ic">◈</span><span class="nav-lbl">Dashboard</span></button>
+        <button class="nav-btn ${ST.currentMod==='clientes'?'active':''}" onclick="navTo('clientes',this)"><span class="nav-ic">👥</span><span class="nav-lbl">Clientes</span><span class="nav-badge">${ST.clientes.length}</span></button>
+        <div class="nav-grp">SUNAT / Declaraciones</div>
+        <button class="nav-btn ${ST.currentMod==='declaraciones'?'active':''}" onclick="navTo('declaraciones',this)"><span class="nav-ic">📋</span><span class="nav-lbl">Declaraciones</span>${pendDecl>0?`<span class="nav-badge">${pendDecl}</span>`:''}</button>
+        <button class="nav-btn ${ST.currentMod==='calendario'?'active':''}" onclick="navTo('calendario',this)"><span class="nav-ic">📅</span><span class="nav-lbl">Calendario</span>${urgentes>0?`<span class="nav-badge">${urgentes}</span>`:''}</button>
+        <div class="nav-grp">Contabilidad</div>
+        <button class="nav-btn ${ST.currentMod==='diario'?'active':''}" onclick="navTo('diario',this)"><span class="nav-ic">📔</span><span class="nav-lbl">Libro Diario</span></button>
+        <button class="nav-btn ${ST.currentMod==='mayor'?'active':''}" onclick="navTo('mayor',this)"><span class="nav-ic">📒</span><span class="nav-lbl">Libro Mayor</span></button>
+        <button class="nav-btn ${ST.currentMod==='balance'?'active':''}" onclick="navTo('balance',this)"><span class="nav-ic">⚖</span><span class="nav-lbl">Bal. Comprobación</span></button>
+        <button class="nav-btn ${ST.currentMod==='ventas'?'active':''}" onclick="navTo('ventas',this)"><span class="nav-ic">📈</span><span class="nav-lbl">Reg. Ventas</span></button>
+        <button class="nav-btn ${ST.currentMod==='compras'?'active':''}" onclick="navTo('compras',this)"><span class="nav-ic">📉</span><span class="nav-lbl">Reg. Compras</span></button>
+        <button class="nav-btn ${ST.currentMod==='pdt621'?'active':''}" onclick="navTo('pdt621',this)"><span class="nav-ic">🧮</span><span class="nav-lbl">PDT 621</span></button>
+        <div class="nav-grp">Provisiones</div>
+        <button class="nav-btn ${ST.currentMod==='planilla'?'active':''}" onclick="navTo('planilla',this)"><span class="nav-ic">💰</span><span class="nav-lbl">Planilla / Benef.</span></button>
+        <button class="nav-btn ${ST.currentMod==='depreciacion'?'active':''}" onclick="navTo('depreciacion',this)"><span class="nav-ic">📉</span><span class="nav-lbl">Depreciación</span></button>
+        <button class="nav-btn ${ST.currentMod==='incobrables'?'active':''}" onclick="navTo('incobrables',this)"><span class="nav-ic">⚠</span><span class="nav-lbl">Cob. Dudosa</span></button>
+        <div class="nav-grp">Documentos</div>
+        <button class="nav-btn ${ST.currentMod==='documentos'?'active':''}" onclick="navTo('documentos',this)"><span class="nav-ic">📁</span><span class="nav-lbl">Documentos PDF</span></button>
+        <button class="nav-btn ${ST.currentMod==='cuentas'?'active':''}" onclick="navTo('cuentas',this)"><span class="nav-ic">📋</span><span class="nav-lbl">Plan de Cuentas</span></button>
+      </nav>
+      <div class="sb-footer">
+        <div class="sb-user">
+          <div class="sb-avatar">${(ST.userName||'C').charAt(0).toUpperCase()}</div>
+          <div><div class="sb-uname">${esc(ST.userName)}</div><div class="sb-urole">Contadora Principal</div></div>
+        </div>
+        <button class="sb-logout" onclick="doLogout()">⎋ Cerrar sesión</button>
+      </div>
+    </aside>
+    <div class="main-area">
+      <div class="topbar">
+        <div class="tb-left">
+          <div class="tb-mod" id="tb-mod">Dashboard</div>
+          <div class="tb-chip" id="tb-chip">${esc(ST.clientes.find(c=>c.id===ST.clienteActivo)?.razonSocial||'—')}</div>
+          <span class="tb-ruc" id="tb-ruc">RUC: ${esc(ST.clientes.find(c=>c.id===ST.clienteActivo)?.ruc||'—')}</span>
+        </div>
+        <div class="tb-right">
+          ${!ST.fbOk?'<span style="font-size:11px;background:#fff8e1;border:1px solid #ffc107;padding:3px 10px;border-radius:20px;color:#856404;font-weight:600">Demo</span>':'<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--acc3);font-weight:600"><span class="online-dot"></span>Firebase</span>'}
+          <select class="tb-periodo" id="tb-periodo" onchange="ST.periodoActivo=this.value;renderModule(ST.currentMod)">
+            ${['2026-03','2026-02','2026-01','2025-12','2025-11'].map(p=>`<option value="${p}" ${p===ST.periodoActivo?'selected':''}>${new Date(p+'-01').toLocaleDateString('es-PE',{month:'long',year:'numeric'})}</option>`).join('')}
+          </select>
+          <button class="btn btn-s btn-green" onclick="exportarTodo()">⬇ Excel</button>
+          <button class="btn btn-s btn-gold" onclick="openFBConfig()">⚙ Firebase</button>
+        </div>
+      </div>
+      <main class="content" id="main"></main>
+    </div>
+  </div>`;
+
+  renderModule(ST.currentMod);
+}
+
+function navTo(mod, btn) {
+  ST.currentMod=mod;
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  renderModule(mod);
+}
+
+function cambiarCliente(id) {
+  ST.clienteActivo=id;
+  const c=ST.clientes.find(x=>x.id===id);
+  const chip=$('tb-chip'), ruc=$('tb-ruc');
+  if(chip) chip.textContent=c?.razonSocial||'—';
+  if(ruc) ruc.textContent='RUC: '+(c?.ruc||'—');
+  renderModule(ST.currentMod);
+}
+
+function renderModule(mod) {
+  const modTitles={dashboard:'Dashboard',clientes:'Clientes',declaraciones:'Declaraciones SUNAT',calendario:'Calendario Tributario',diario:'Libro Diario',mayor:'Libro Mayor',balance:'Balance de Comprobación',ventas:'Registro de Ventas',compras:'Registro de Compras',pdt621:'PDT 621',planilla:'Planilla y Beneficios',depreciacion:'Depreciación de Activos',incobrables:'Cobranza Dudosa',documentos:'Documentos PDF',cuentas:'Plan de Cuentas PCGE'};
+  const el=$('tb-mod'); if(el) el.textContent=modTitles[mod]||mod;
+  const fns={dashboard:renderDashboard,clientes:renderClientes,declaraciones:renderDeclaraciones,calendario:renderCalendario,diario:renderDiario,mayor:renderMayor,balance:renderBalance,ventas:renderVentas,compras:renderCompras,pdt621:renderPDT621,planilla:renderPlanilla,depreciacion:renderDepreciacion,incobrables:renderIncobrables,documentos:renderDocumentos,cuentas:renderCuentas};
+  const mc=$('main');
+  if(mc) mc.innerHTML=`<div class="module">${(!ST.fbOk?renderFBBanner():'')}${(fns[mod]||renderDashboard)()}</div>`;
+}
+
+function renderFBBanner() {
+  return `<div class="fb-banner"><div class="fb-banner-icon">🔥</div><div><div class="fb-banner-title">Modo Demo — Los datos no se guardan en la nube</div><div class="fb-banner-text">Configura Firebase para almacenamiento permanente. Haz clic en <strong>⚙ Firebase</strong> (esquina superior derecha) e ingresa tus credenciales.</div></div><button class="btn btn-s btn-gold" style="flex-shrink:0;margin-left:auto" onclick="openFBConfig()">Configurar</button></div>`;
+}
+
+// ══════════════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════════════
+function renderDashboard() {
+  const allDecls=ST.clientes.flatMap(c=>(ST._data[c.id]||{}).declaraciones||[]);
+  const pendientes=allDecls.filter(d=>d.estado==='pendiente'||d.estado==='en-proceso');
+  const vencidas=allDecls.filter(d=>d.estado==='vencida');
+  const presentadas=allDecls.filter(d=>d.estado==='presentada');
+  const urgentes=allDecls.filter(d=>d.estado!=='presentada'&&diasHasta(d.vencimiento)<=7).sort((a,b)=>new Date(a.vencimiento)-new Date(b.vencimiento));
+  const cl=ST.clientes.find(c=>c.id===ST.clienteActivo)||{};
+  const p=calcPlanillaTotal(), imp=calcImpuestos();
+  const depTotal=getData('activos').reduce((s,a)=>s+calcDepAct(a).m,0);
+  const provTotal=p.costo+imp.total+depTotal;
+
+  const urgHtml=urgentes.slice(0,5).map(d=>{
+    const c=ST.clientes.find(x=>x.id===(d._clienteId||ST.clienteActivo))||{razonSocial:'—'};
+    const dias=diasHasta(d.vencimiento);
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--brd)">
+      <div><div style="font-weight:600;font-size:13px">${esc(d.tipo)}</div><div style="font-size:11px;color:var(--txt2)">${esc(c.razonSocial)} · ${d.periodo}</div></div>
+      <div style="text-align:right"><div style="font-family:var(--fm);font-size:12px;font-weight:700;color:${dias<=3?'var(--acc4)':'var(--acc2)'}">${d.vencimiento}</div><div style="font-size:11px;color:${dias<=3?'var(--acc4)':'var(--acc2)'}">${dias<=0?'¡VENCIDO!':dias===1?'Mañana':dias+' días'}</div></div>
+    </div>`;
+  }).join('');
+
+  const provCards=[
+    {ic:'💰',label:'Planilla',monto:p.costo,color:'var(--acc3)',mod:'planilla'},
+    {ic:'🏛',label:'SUNAT',monto:imp.total,color:'var(--acc2)',mod:'pdt621'},
+    {ic:'📉',label:'Depreciación',monto:depTotal,color:'var(--acc5)',mod:'depreciacion'},
+  ];
+
+  return `
+  <div class="ph"><div class="ph-row"><div><h1>Dashboard General</h1><p>${new Date().toLocaleDateString('es-PE',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</p></div></div></div>
+
+  <div class="sg" style="grid-template-columns:repeat(5,1fr)">
+    <div class="sc" style="--ac:var(--acc)"><div class="sl">CLIENTES</div><div class="sv">${ST.clientes.length}</div><div class="sd">registrados</div></div>
+    <div class="sc" style="--ac:var(--acc2)"><div class="sl">PENDIENTES</div><div class="sv" style="color:var(--acc2)">${pendientes.length}</div><div class="sd">declaraciones</div></div>
+    <div class="sc" style="--ac:var(--acc3)"><div class="sl">PRESENTADAS</div><div class="sv" style="color:var(--acc3)">${presentadas.length}</div><div class="sd">este mes</div></div>
+    <div class="sc" style="--ac:var(--acc4)"><div class="sl">VENCIDAS</div><div class="sv" style="color:var(--acc4)">${vencidas.length}</div><div class="sd">urgente</div></div>
+    <div class="sc" style="--ac:var(--acc5)"><div class="sl">PROVISIONES MES</div><div class="sv" style="font-size:15px">${S(provTotal)}</div><div class="sd">${esc(cl.razonSocial||'—')}</div></div>
+  </div>
+
+  <div class="g2" style="margin-bottom:16px">
+    <div class="card">
+      <div class="ch"><span class="ct">⚠ Vencimientos Urgentes</span><button class="btn btn-s btn-g" onclick="navTo('calendario')">Ver todos</button></div>
+      ${urgentes.length?urgHtml:'<div class="empty" style="padding:20px 0"><div class="ei" style="font-size:32px">✅</div><p>Sin vencimientos urgentes</p></div>'}
+    </div>
+    <div class="card">
+      <div class="ch"><span class="ct">Provisiones del Período · ${esc(cl.razonSocial||'—')}</span></div>
+      ${provCards.map(pc=>`<div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--brd);cursor:pointer" onclick="navTo('${pc.mod}')">
+        <span style="font-size:20px">${pc.ic}</span><span style="flex:1;font-weight:600;font-size:13px">${pc.label}</span>
+        <div style="width:80px;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden"><div style="width:${provTotal?fmt(pc.monto/provTotal*100):0}%;height:100%;background:${pc.color};border-radius:3px"></div></div>
+        <span style="font-family:var(--fm);font-weight:700;color:${pc.color};min-width:85px;text-align:right;font-size:12px">${S(pc.monto)}</span>
+      </div>`).join('')}
+      <div style="display:flex;justify-content:flex-end;padding-top:9px;font-weight:800;color:var(--acc)">Total: ${S(provTotal)}</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch"><span class="ct">Últimas Declaraciones</span><button class="btn btn-s btn-g" onclick="navTo('declaraciones')">Ver todas</button></div>
+    <div class="tw"><table>
+      <thead><tr><th>Tipo</th><th>Cliente</th><th>Período</th><th>Estado</th><th>Vencimiento</th></tr></thead>
+      <tbody>${allDecls.slice(0,6).map(d=>{
+        const c=ST.clientes.find(x=>x.id===(d._clienteId||ST.clienteActivo))||{razonSocial:'?'};
+        const bmap={presentada:'bs',pendiente:'bw','en-proceso':'bi',vencida:'bd'};
+        return `<tr><td style="font-weight:600">${esc(d.tipo)}</td><td style="font-size:12px">${esc(c.razonSocial)}</td><td style="font-family:var(--fm);font-size:12px">${d.periodo}</td><td><span class="badge ${bmap[d.estado]||'bm'}">${d.estado}</span></td><td style="font-size:12px;color:${diasHasta(d.vencimiento)<=5&&d.estado!=='presentada'?'var(--acc4)':'var(--txt2)'}">${d.vencimiento}</td></tr>`;
+      }).join('')||'<tr><td colspan="5"><div class="empty"><div class="ei">📋</div><p>Sin declaraciones</p></div></td></tr>'}</tbody>
+    </table></div>
+  </div>`;
+}
+
+// ══════════════════════════════════════════════════════
+// CLIENTES
+// ══════════════════════════════════════════════════════
+let cliSearch='';
+function renderClientes() {
+  const list=ST.clientes.filter(c=>c.razonSocial?.toLowerCase().includes(cliSearch.toLowerCase())||c.ruc?.includes(cliSearch));
+  const cards=list.map(c=>{
+    const decls=(ST._data[c.id]||{}).declaraciones||[];
+    const pend=decls.filter(d=>d.estado==='pendiente'||d.estado==='en-proceso').length;
+    const venc=decls.filter(d=>d.estado==='vencida').length;
+    const alertCls=venc>0?'var(--acc4)':pend>0?'var(--acc2)':'var(--acc3)';
+    const alertTxt=venc>0?`⚠ ${venc} vencida(s)`:pend>0?`⏳ ${pend} pendiente(s)`:'✓ Al día';
+    return `<div class="cli-card reg-${c.regimen}" style="--rc:${regColor(c.regimen)}" onclick="verCliente('${c.id}')">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div><div class="cc-name">${esc(c.razonSocial)}</div><div class="cc-ruc">RUC: ${esc(c.ruc)}</div></div>
+        <span class="badge bm" style="font-size:10px">${c.regimen}</span>
+      </div>
+      <div class="cc-body">
+        <div class="cc-row">👤 ${esc(c.responsable||'—')}</div>
+        <div class="cc-row">📧 ${esc(c.email||'—')}</div>
+        <div class="cc-row">📞 ${esc(c.telefono||'—')}</div>
+      </div>
+      <div class="cc-ft">
+        <span style="font-size:11px;color:var(--txt3)">${decls.length} declaraciones</span>
+        <span style="font-size:11.5px;font-weight:700;color:${alertCls}">${alertTxt}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `
+  <div class="ph"><div class="ph-row"><div><h1>Clientes</h1><p>${ST.clientes.length} clientes registrados</p></div>
+  <button class="btn btn-p" onclick="openClienteModal()">+ Nuevo Cliente</button></div></div>
+  <div class="toolbar">
+    <div class="si"><span class="sic">⌕</span><input class="sin" placeholder="Buscar nombre o RUC..." value="${esc(cliSearch)}" oninput="cliSearch=this.value;renderModule('clientes')"/></div>
+    ${['RG','RMT','RS','RUS'].map(r=>`<button class="btn btn-s btn-g" onclick="cliSearch='${r}';renderModule('clientes')">${r}</button>`).join('')}
+    <button class="btn btn-s btn-g" onclick="cliSearch='';renderModule('clientes')">Todos</button>
+  </div>
+  ${list.length?`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px">${cards}</div>`:'<div class="empty"><div class="ei">👥</div><p>No hay clientes</p></div>'}`;
+}
+
+function openClienteModal(data=null) {
+  const d=data||{razonSocial:'',ruc:'',regimen:'RG',responsable:'',email:'',telefono:'',direccion:'',periodoInicio:today().slice(0,7),notas:''};
+  const isE=!!data;
+  $('modal-root').innerHTML=`<div class="overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal modal-lg"><div class="mh"><span class="mt">${isE?'Editar':'Nuevo'} Cliente</span><button class="btn btn-g btn-s" onclick="closeModal()">✕</button></div>
+  <div class="fg3">
+    <div class="fg span2"><label class="fl">Razón Social *</label><input class="fi" id="cc-rs" value="${esc(d.razonSocial)}" placeholder="Empresa SAC"/></div>
+    <div class="fg"><label class="fl">RUC *</label><input class="fi" id="cc-ruc" value="${esc(d.ruc)}" maxlength="11" placeholder="20123456789"/></div>
+    <div class="fg"><label class="fl">Régimen *</label><select class="fsel" id="cc-reg">${['RG','RMT','RS','RUS'].map(r=>`<option value="${r}" ${d.regimen===r?'selected':''}>${r} — ${regLabel(r)}</option>`).join('')}</select></div>
+    <div class="fg"><label class="fl">Responsable</label><input class="fi" id="cc-resp" value="${esc(d.responsable)}"/></div>
+    <div class="fg"><label class="fl">Email</label><input class="fi" id="cc-email" type="email" value="${esc(d.email)}"/></div>
+    <div class="fg"><label class="fl">Teléfono</label><input class="fi" id="cc-tel" value="${esc(d.telefono)}"/></div>
+    <div class="fg"><label class="fl">Inicio servicios</label><input class="fi" id="cc-ini" type="month" value="${d.periodoInicio||''}"/></div>
+    <div class="fg span2"><label class="fl">Dirección</label><input class="fi" id="cc-dir" value="${esc(d.direccion||'')}"/></div>
+    <div class="fg" style="grid-column:span 3"><label class="fl">Notas internas</label><textarea class="fta" id="cc-not">${esc(d.notas||'')}</textarea></div>
+  </div>
+  <div class="mf"><button class="btn btn-g" onclick="closeModal()">Cancelar</button><button class="btn btn-p" onclick="saveCliente(${isE?`'${data.id}'`:'null'})">${isE?'Guardar':'Registrar'}</button></div>
+  </div></div>`;
+}
+
+async function saveCliente(editId) {
+  const rs=$('cc-rs')?.value.trim(), ruc=$('cc-ruc')?.value.trim();
+  if(!rs||!ruc){notify('Razón social y RUC son requeridos','err');return;}
+  const obj={razonSocial:rs,ruc,regimen:$('cc-reg').value,responsable:$('cc-resp').value,email:$('cc-email').value,telefono:$('cc-tel').value,periodoInicio:$('cc-ini').value,direccion:$('cc-dir').value,notas:$('cc-not').value,activo:true};
+  if(editId){
+    await fbUpdate('clientes',editId,obj);
+    const idx=ST.clientes.findIndex(c=>c.id===editId);
+    if(idx>=0) ST.clientes[idx]={...ST.clientes[idx],...obj};
+    notify('Cliente actualizado ✓');
+  } else {
+    const id=await fbSave('clientes',obj)||('c_'+Date.now());
+    ST.clientes.unshift({id,...obj});
+    if(!ST._data[id]) ST._data[id]={trabajadores:[],ventas:[],compras:[],activos:[],incobrables:[],asientos:[],declaraciones:[]};
+    notify('Cliente registrado ✓');
+  }
+  closeModal(); renderApp();
+}
+
+function verCliente(id) {
+  ST.clienteActivo=id;
+  const sel=$('cli-sel'); if(sel) sel.value=id;
+  navTo('declaraciones');
+}
+
+// ══════════════════════════════════════════════════════
+// DECLARACIONES
+// ══════════════════════════════════════════════════════
+let declSearch='', declEst='todos';
+function renderDeclaraciones() {
+  const cl=ST.clientes.find(c=>c.id===ST.clienteActivo)||{};
+  let decls=getData('declaraciones').filter(d=>{
+    const ms=d.tipo?.toLowerCase().includes(declSearch.toLowerCase())||d.periodo?.includes(declSearch)||d.notas?.toLowerCase().includes(declSearch.toLowerCase());
+    const me=declEst==='todos'||d.estado===declEst;
+    return ms&&me;
+  });
+  const bmap={presentada:'bs',pendiente:'bw','en-proceso':'bi',vencida:'bd'};
+  const rows=decls.map(d=>`<tr>
+    <td><div style="font-weight:700">${esc(d.tipo)}</div><div style="font-size:11px;font-family:var(--fm);color:var(--txt3)">${d.periodo}</div></td>
+    <td><span class="badge ${bmap[d.estado]||'bm'}">${d.estado}</span></td>
+    <td style="font-size:12px;color:${diasHasta(d.vencimiento)<=5&&d.estado!=='presentada'?'var(--acc4)':'var(--txt2)';font-weight:${diasHasta(d.vencimiento)<=5?700:400}">${d.vencimiento||'—'}</td>
+    <td class="r mono">${d.igv?S(d.igv):'—'}</td>
+    <td class="r mono">${d.renta?S(d.renta):'—'}</td>
+    <td style="font-size:12px;color:var(--txt3);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(d.notas||'—')}</td>
+    <td><div style="display:flex;gap:5px">
+      <button class="btn btn-s btn-g" onclick="openDeclModal('${d.id}')">✎</button>
+      <button class="btn btn-s btn-d" onclick="delDecl('${d.id}')">✕</button>
+    </div></td>
+  </tr>`).join('');
+
+  return `
+  <div class="ph"><div class="ph-row"><div><h1>Declaraciones SUNAT</h1><p>${esc(cl.razonSocial||'—')} · RUC: ${esc(cl.ruc||'—')}</p></div>
+  <button class="btn btn-p" onclick="openDeclModal(null)">+ Nueva Declaración</button></div></div>
+
+  <div class="sg" style="grid-template-columns:repeat(4,1fr)">
+    ${[['Pendientes','pendiente','var(--acc2)'],['En proceso','en-proceso','var(--acc6)'],['Presentadas','presentada','var(--acc3)'],['Vencidas','vencida','var(--acc4)']].map(([l,e,col])=>`<div class="sc" style="--ac:${col};cursor:pointer" onclick="declEst='${e}';renderModule('declaraciones')"><div class="sl">${l.toUpperCase()}</div><div class="sv" style="color:${col}">${getData('declaraciones').filter(d=>d.estado===e).length}</div></div>`).join('')}
+  </div>
+
+  <div class="card">
+    <div class="toolbar">
+      <div class="si"><span class="sic">⌕</span><input class="sin" placeholder="Buscar tipo, período..." value="${esc(declSearch)}" oninput="declSearch=this.value;renderModule('declaraciones')"/></div>
+      ${['todos','pendiente','en-proceso','presentada','vencida'].map(e=>`<button class="btn btn-s ${declEst===e?'btn-p':'btn-g'}" onclick="declEst='${e}';renderModule('declaraciones')">${e==='todos'?'Todos':e}</button>`).join('')}
+    </div>
+    <div class="tw"><table>
+      <thead><tr><th>Tipo / Período</th><th>Estado</th><th>Vencimiento</th><th class="r">IGV</th><th class="r">Renta</th><th>Notas</th><th></th></tr></thead>
+      <tbody>${rows||'<tr><td colspan="7"><div class="empty"><div class="ei">📋</div><p>Sin declaraciones</p></div></td></tr>'}</tbody>
+    </table></div>
+  </div>`;
+}
+
+function openDeclModal(id=null) {
+  const d=id?getData('declaraciones').find(x=>x.id===id):null;
+  const isE=!!d;
+  const def=d||{tipo:'PDT 621',periodo:ST.periodoActivo,vencimiento:'',estado:'pendiente',igv:'',renta:'',notas:''};
+  const TIPOS=['PDT 621','PDT 601','PDT 617','Renta Anual','Cuota RUS','DAOT','Libros Electrónicos','Otros'];
+  $('modal-root').innerHTML=`<div class="overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal"><div class="mh"><span class="mt">${isE?'Editar':'Nueva'} Declaración</span><button class="btn btn-g btn-s" onclick="closeModal()">✕</button></div>
+  <div class="fg2">
+    <div class="fg"><label class="fl">Tipo *</label><select class="fsel" id="d-tipo">${TIPOS.map(t=>`<option ${def.tipo===t?'selected':''}>${t}</option>`).join('')}</select></div>
+    <div class="fg"><label class="fl">Período</label><input class="fi" id="d-periodo" type="month" value="${def.periodo}"/></div>
+    <div class="fg"><label class="fl">Vencimiento</label><input class="fi" id="d-venc" type="date" value="${def.vencimiento||''}"/></div>
+    <div class="fg"><label class="fl">Estado</label><select class="fsel" id="d-est">${['pendiente','en-proceso','presentada','vencida'].map(e=>`<option ${def.estado===e?'selected':''}>${e}</option>`).join('')}</select></div>
+    <div class="fg"><label class="fl">Monto IGV (S/)</label><input class="fi" id="d-igv" type="number" value="${def.igv||''}"/></div>
+    <div class="fg"><label class="fl">Monto Renta (S/)</label><input class="fi" id="d-renta" type="number" value="${def.renta||''}"/></div>
+    <div class="fg span2"><label class="fl">Notas / Observaciones</label><textarea class="fta" id="d-notas">${esc(def.notas||'')}</textarea></div>
+  </div>
+  <div class="mf"><button class="btn btn-g" onclick="closeModal()">Cancelar</button><button class="btn btn-p" onclick="saveDecl(${isE?`'${d.id}'`:'null'})">${isE?'Guardar':'Registrar'}</button></div>
+  </div></div>`;
+}
+
+async function saveDecl(editId) {
+  const obj={tipo:$('d-tipo').value,periodo:$('d-periodo').value,vencimiento:$('d-venc').value,estado:$('d-est').value,igv:parseFloat($('d-igv').value)||0,renta:parseFloat($('d-renta').value)||0,notas:$('d-notas').value,_clienteId:ST.clienteActivo};
+  const arr=getData('declaraciones');
+  if(editId){const idx=arr.findIndex(x=>x.id===editId);if(idx>=0)arr[idx]={...arr[idx],...obj};notify('Actualizado ✓');}
+  else{arr.unshift({id:'D'+Date.now(),...obj});notify('Declaración registrada ✓');}
+  closeModal();renderModule('declaraciones');renderApp();
+}
+function delDecl(id){if(!confirm('¿Eliminar?'))return;setData('declaraciones',getData('declaraciones').filter(x=>x.id!==id));notify('Eliminado');renderModule('declaraciones');}
+
+// ══════════════════════════════════════════════════════
+// CALENDARIO
+// ══════════════════════════════════════════════════════
+function renderCalendario() {
+  const allDecls=ST.clientes.flatMap(c=>(ST._data[c.id]||{}).declaraciones?.map(d=>({...d,_clienteId:c.id}))||[]).filter(d=>d.estado!=='presentada').sort((a,b)=>new Date(a.vencimiento)-new Date(b.vencimiento));
+  const urgentes=allDecls.filter(d=>diasHasta(d.vencimiento)>=0&&diasHasta(d.vencimiento)<=7).length;
+  const vencidas=allDecls.filter(d=>d.estado==='vencida').length;
+
+  const items=allDecls.map(d=>{
+    const c=ST.clientes.find(x=>x.id===d._clienteId)||{razonSocial:'?'};
+    const dias=diasHasta(d.vencimiento);
+    const cls=d.estado==='vencida'?'var(--acc4)':dias<=5?'var(--acc4)':dias<=15?'var(--acc2)':'var(--acc3)';
+    const bmap={pendiente:'bw','en-proceso':'bi',vencida:'bd'};
+    return `<div style="background:var(--bg2);border:1.5px solid ${cls === 'var(--acc4)' ? '#ffd0d0' : cls === 'var(--acc2)' ? '#ffe0a0' : 'var(--brd)'};border-radius:var(--r);padding:14px;transition:.14s" class="cal-item">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div><div style="font-weight:700;font-size:13px">${esc(d.tipo)}</div><div style="font-size:11.5px;color:var(--txt2);cursor:pointer" onclick="verCliente('${d._clienteId}')">${esc(c.razonSocial)}</div><div style="font-size:11px;font-family:var(--fm);color:var(--txt3)">${d.periodo}</div></div>
+        <div style="text-align:right"><div style="font-family:var(--fm);font-size:12px;font-weight:700;color:${cls}">${d.vencimiento||'—'}</div><div style="font-size:11px;font-weight:700;color:${cls}">${d.estado==='vencida'?'VENCIDA':dias<=0?'HOY':dias===1?'Mañana':dias+' días'}</div></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span class="badge ${bmap[d.estado]||'bm'}">${d.estado}</span>
+        <button class="btn btn-s btn-g" onclick="openDeclModal('${d.id}')">Actualizar</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `
+  <div class="ph"><h1>📅 Calendario Tributario</h1><p>Todos los clientes · Ordenado por urgencia</p></div>
+  <div class="sg" style="grid-template-columns:repeat(4,1fr)">
+    <div class="sc" style="--ac:var(--acc4)"><div class="sl">VENCIDAS</div><div class="sv" style="color:var(--acc4)">${vencidas}</div></div>
+    <div class="sc" style="--ac:var(--acc2)"><div class="sl">PRÓXIMOS 7 DÍAS</div><div class="sv" style="color:var(--acc2)">${urgentes}</div></div>
+    <div class="sc" style="--ac:var(--acc)"><div class="sl">TOTAL PENDIENTES</div><div class="sv">${allDecls.length}</div></div>
+    <div class="sc" style="--ac:var(--acc3)"><div class="sl">CLIENTES</div><div class="sv" style="color:var(--acc3)">${ST.clientes.length}</div></div>
+  </div>
+  ${allDecls.length?`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">${items}</div>`:'<div class="empty"><div class="ei">🎉</div><p>¡Todo al día!</p></div>'}`;
+}
+
+// ══════════════════════════════════════════════════════
+// LIBRO DIARIO
+// ══════════════════════════════════════════════════════
+let asPartidas=[{cta:'',nom:'',D:0,H:0},{cta:'',nom:'',D:0,H:0}];
+function renderDiario() {
+  const cl=ST.clientes.find(c=>c.id===ST.clienteActivo)||{};
+  const asientos=getData('asientos');
+  const tD=asientos.reduce((s,a)=>s+a.partidas.reduce((x,p)=>x+p.D,0),0);
+  const tH=asientos.reduce((s,a)=>s+a.partidas.reduce((x,p)=>x+p.H,0),0);
+  const cuadra=Math.abs(tD-tH)<0.01;
+
+  const items=asientos.map(a=>{
+    const aD=a.partidas.reduce((s,p)=>s+p.D,0);
+    const filas=a.partidas.map(p=>`<tr><td style="font-family:var(--fm);font-size:11px;color:var(--acc)">${p.cta}</td><td>${esc(p.nom)}</td><td class="r as-D">${p.D>0?S(p.D):'—'}</td><td class="r as-H">${p.H>0?S(p.H):'—'}</td></tr>`).join('');
+    return `<div class="asiento-card"><div class="as-hdr" onclick="toggleAs('as-${a.id}')">
+      <span class="as-num">${a.numero}</span><span class="as-glosa">${esc(a.glosa)}</span>
+      <span class="as-fecha">${a.fecha}</span>
+      <span style="font-family:var(--fm);font-size:12px;color:var(--acc3);margin-left:8px">${S(aD)}</span>
+      <span style="margin-left:8px;color:var(--txt3)" id="ic-as-${a.id}">▼</span>
+      <div style="display:flex;gap:4px;margin-left:8px">
+        <button class="btn btn-s btn-g" onclick="event.stopPropagation();editAsiento('${a.id}')">✎</button>
+        <button class="btn btn-s btn-d" onclick="event.stopPropagation();delAsiento('${a.id}')">✕</button>
+      </div>
+    </div>
+    <div class="as-body" id="as-${a.id}"><table class="as-table"><thead><tr><th>Cuenta</th><th>Descripción</th><th class="r">DEBE</th><th class="r">HABER</th></tr></thead>
+    <tbody>${filas}</tbody><tfoot><tr><td colspan="2" style="text-align:right">TOTALES</td><td class="r as-D">${S(aD)}</td><td class="r as-H">${S(aD)}</td></tr></tfoot></table></div></div>`;
+  }).join('');
+
+  return `
+  <div class="ph"><div class="ph-row"><div><h1>📔 Libro Diario</h1><p>${esc(cl.razonSocial||'—')} · ${ST.periodoActivo}</p></div>
+  <div style="display:flex;gap:9px">
+    <button class="btn btn-p" onclick="openAsientoModal()">+ Nuevo Asiento</button>
+    <button class="btn btn-gold" onclick="genAsientosAuto()">⚡ Auto Facturas</button>
+  </div></div></div>
+
+  <div class="sg" style="grid-template-columns:repeat(4,1fr)">
+    <div class="sc"><div class="sl">ASIENTOS</div><div class="sv">${asientos.length}</div></div>
+    <div class="sc" style="--ac:var(--acc3)"><div class="sl">TOTAL DEBE</div><div class="sv" style="font-size:15px;color:var(--acc3)">${S(tD)}</div></div>
+    <div class="sc" style="--ac:var(--acc4)"><div class="sl">TOTAL HABER</div><div class="sv" style="font-size:15px;color:var(--acc4)">${S(tH)}</div></div>
+    <div class="sc" style="--ac:${cuadra?'var(--acc3)':'var(--acc4)'}"><div class="sl">PARTIDA</div><div class="sv" style="font-size:16px;color:${cuadra?'var(--acc3)':'var(--acc4)'}">${cuadra?'✓ OK':'✕ Error'}</div></div>
+  </div>
+  ${asientos.length?items:'<div class="empty"><div class="ei">📔</div><p>Sin asientos. Usa "+ Nuevo" o "⚡ Auto".</p></div>'}`;
+}
+
+function toggleAs(id){const b=$(id),ic=$('ic-'+id);if(!b)return;const o=b.classList.toggle('open');if(ic)ic.textContent=o?'▲':'▼';}
+function delAsiento(id){if(!confirm('¿Eliminar asiento?'))return;setData('asientos',getData('asientos').filter(a=>a.id!==id));notify('Eliminado');renderModule('diario');}
+function editAsiento(id){openAsientoModal(getData('asientos').find(a=>a.id===id));}
+
+const PCGE_SEL=[['101','Caja'],['104','Cuentas corrientes'],['121','Fact. por cobrar'],['401','Tributos por pagar'],['4011','IGV cta. propia'],['4017','IR por pagar'],['411','Remuneraciones por pagar'],['415','Beneficios sociales'],['421','Fact. por pagar'],['501','Capital social'],['591','Resultados acumulados'],['601','Mercaderías'],['621','Remuneraciones'],['625','CTS'],['627','ESSALUD'],['632','Asesoría y consultoría'],['636','Servicios básicos'],['641','Gastos tributarios'],['681','Depreciación'],['684','Estimación cob. dudosa'],['191','Prov. cob. dudosa'],['393','Depreciación acumulada'],['701','Ventas mercaderías'],['704','Ventas servicios'],['94','Gastos administración'],['95','Gastos ventas']];
+
+function openAsientoModal(data=null) {
+  asPartidas=data?JSON.parse(JSON.stringify(data.partidas)):[{cta:'',nom:'',D:0,H:0},{cta:'',nom:'',D:0,H:0}];
+  const d=data||{fecha:today(),numero:'',glosa:''};
+  const cuentasOpts=PCGE_SEL.map(([k,v])=>`<option value="${k}">${k} — ${v}</option>`).join('');
+  $('modal-root').innerHTML=`<div class="overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal modal-xl"><div class="mh"><span class="mt">${data?'Editar':'Nuevo'} Asiento</span><button class="btn btn-g btn-s" onclick="closeModal()">✕</button></div>
+  <div class="fg3" style="margin-bottom:12px">
+    <div class="fg"><label class="fl">N° Asiento</label><input class="fi" id="as-num" value="${esc(d.numero)}" placeholder="001"/></div>
+    <div class="fg"><label class="fl">Fecha</label><input class="fi" id="as-fecha" type="date" value="${d.fecha}"/></div>
+    <div class="fg span3"><label class="fl">Glosa *</label><input class="fi" id="as-glosa" value="${esc(d.glosa)}" placeholder="Descripción del asiento"/></div>
+  </div>
+  <div style="font-size:11px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Partidas</div>
+  <table class="as-table" style="margin-bottom:10px"><thead><tr><th style="width:200px">Cuenta</th><th>Descripción</th><th class="r" style="width:120px">DEBE</th><th class="r" style="width:120px">HABER</th><th style="width:36px"></th></tr></thead>
+  <tbody id="as-partidas"></tbody>
+  <tfoot><tr><td colspan="2" style="text-align:right">TOTALES</td><td class="r as-D" id="as-tD">S/ 0.00</td><td class="r as-H" id="as-tH">S/ 0.00</td><td></td></tr></tfoot></table>
+  <button class="btn btn-g btn-s" onclick="asAddPartida()">+ Línea</button>
+  <div id="as-err" style="display:none;color:var(--acc4);font-size:12px;font-weight:600;margin-top:7px">⚠ El asiento no cuadra</div>
+  <div class="mf"><button class="btn btn-g" onclick="closeModal()">Cancelar</button><button class="btn btn-p" onclick="asGuardar(${data?`'${data.id}'`:'null'})">${data?'Guardar':'Registrar'}</button></div>
+  </div></div>`;
+  asRenderPartidas(cuentasOpts);
+}
+
+function asRenderPartidas(opts) {
+  const co=opts||PCGE_SEL.map(([k,v])=>`<option value="${k}">${k} — ${v}</option>`).join('');
+  const tb=$('as-partidas'); if(!tb) return;
+  tb.innerHTML=asPartidas.map((p,i)=>`<tr>
+    <td><select class="fsel" style="font-size:12px;padding:5px 8px" onchange="asUpdP(${i},'cta',this.value)"><option value="">-- Cuenta --</option>${co.replace(`value="${p.cta}"`,`value="${p.cta}" selected`)}</select></td>
+    <td style="font-size:12px;color:var(--txt2)">${PCGE_SEL.find(([k])=>k===p.cta)?.[1]||''}</td>
+    <td><input type="number" class="fi" style="text-align:right;padding:5px 8px;font-size:12px" value="${p.D||''}" oninput="asUpdP(${i},'D',this.value)"/></td>
+    <td><input type="number" class="fi" style="text-align:right;padding:5px 8px;font-size:12px" value="${p.H||''}" oninput="asUpdP(${i},'H',this.value)"/></td>
+    <td><button class="btn btn-s btn-d" style="padding:4px 7px" onclick="asRemP(${i})">✕</button></td>
+  </tr>`).join('');
+  asUpdTots();
+}
+function asUpdP(i,f,v){asPartidas[i][f]=f==='cta'?v:parseFloat(v)||0;if(f==='cta')asRenderPartidas();else asUpdTots();}
+function asAddPartida(){asPartidas.push({cta:'',nom:'',D:0,H:0});asRenderPartidas();}
+function asRemP(i){asPartidas.splice(i,1);asRenderPartidas();}
+function asUpdTots(){const tD=$('as-tD'),tH=$('as-tH'),err=$('as-err');const D=asPartidas.reduce((s,p)=>s+p.D,0),H=asPartidas.reduce((s,p)=>s+p.H,0);if(tD)tD.textContent=S(D);if(tH)tH.textContent=S(H);if(err)err.style.display=Math.abs(D-H)<0.01||D===0?'none':'block';}
+function asGuardar(editId){
+  const glosa=$('as-glosa')?.value.trim(),fecha=$('as-fecha')?.value;
+  if(!glosa||!fecha){notify('Completa fecha y glosa','err');return;}
+  const D=asPartidas.reduce((s,p)=>s+p.D,0),H=asPartidas.reduce((s,p)=>s+p.H,0);
+  if(Math.abs(D-H)>0.01){notify('El asiento no cuadra','err');return;}
+  const obj={fecha,numero:$('as-num').value,glosa,partidas:asPartidas.map(p=>({...p,nom:PCGE_SEL.find(([k])=>k===p.cta)?.[1]||p.nom}))};
+  const arr=getData('asientos');
+  if(editId){const idx=arr.findIndex(a=>a.id===editId);if(idx>=0)arr[idx]={...arr[idx],...obj};notify('Asiento actualizado ✓');}
+  else{arr.unshift({id:'A'+Date.now(),...obj});notify('Asiento registrado ✓');}
+  closeModal();renderModule('diario');
+}
+function genAsientosAuto(){
+  const arr=getData('asientos');
+  getData('ventas').forEach((v,i)=>arr.push({id:'AV'+Date.now()+i,fecha:v.fecha,numero:String(arr.length+1).padStart(3,'0'),glosa:`VENTA: ${v.cliente} - ${v.serie}-${v.numero}`,partidas:[{cta:'121',nom:'Fact. por cobrar',D:v.total,H:0},{cta:'704',nom:'Ventas servicios',D:0,H:v.base},{cta:'4011',nom:'IGV cta. propia',D:0,H:v.igv}]}));
+  getData('compras').forEach((c,i)=>arr.push({id:'AC'+Date.now()+i,fecha:c.fecha,numero:String(arr.length+1).padStart(3,'0'),glosa:`COMPRA: ${c.proveedor} - ${c.serie}-${c.numero}`,partidas:[{cta:'636',nom:'Servicios / Gastos',D:c.base,H:0},{cta:'4011',nom:'IGV crédito fiscal',D:c.igv,H:0},{cta:'421',nom:'Fact. por pagar',D:0,H:c.total}]}));
+  notify(`${getData('ventas').length+getData('compras').length} asientos generados ✓`);renderModule('diario');
+}
+
+// ══════════════════════════════════════════════════════
+// LIBRO MAYOR
+// ══════════════════════════════════════════════════════
+function renderMayor() {
+  const cl=ST.clientes.find(c=>c.id===ST.clienteActivo)||{};
+  const ctas={};
+  getData('asientos').forEach(a=>a.partidas.forEach(p=>{
+    if(!p.cta) return;
+    if(!ctas[p.cta]) ctas[p.cta]={D:0,H:0,movs:[]};
+    ctas[p.cta].D+=p.D; ctas[p.cta].H+=p.H;
+    ctas[p.cta].movs.push({fecha:a.fecha,glosa:a.glosa,D:p.D,H:p.H});
+  }));
+  const cards=Object.entries(ctas).sort((a,b)=>a[0].localeCompare(b[0])).map(([cta,d])=>{
+    const nom=PCGE_SEL.find(([k])=>k===cta)?.[1]||cta;
+    const saldo=d.D-d.H;
+    let sa=0;
+    const filas=d.movs.map(m=>{sa+=m.D-m.H;return `<tr><td style="font-size:11px;color:var(--txt2)">${m.fecha}</td><td style="font-size:12px">${esc(m.glosa)}</td><td class="r mono" style="color:var(--acc3)">${m.D>0?S(m.D):'—'}</td><td class="r mono" style="color:var(--acc4)">${m.H>0?S(m.H):'—'}</td><td class="r mono" style="font-weight:600;color:${sa>=0?'var(--acc3)':'var(--acc4)'}">${S(Math.abs(sa))}</td></tr>`;}).join('');
+    return `<div class="card" style="margin-bottom:12px">
+      <div style="background:var(--acc);color:white;margin:-18px -18px 12px;padding:12px 18px;display:flex;align-items:center;gap:12px;border-radius:var(--r) var(--r) 0 0">
+        <span style="font-family:var(--fm);font-size:13px;font-weight:700">${cta}</span>
+        <span style="flex:1;font-weight:600">${nom}</span>
+        <span style="font-family:var(--fm);font-size:13px">${saldo>=0?S(saldo)+' DEUDOR':S(Math.abs(saldo))+' ACREEDOR'}</span>
+      </div>
+      <div class="tw"><table><thead><tr><th>Fecha</th><th>Concepto</th><th class="r" style="color:var(--acc3)">DEBE</th><th class="r" style="color:var(--acc4)">HABER</th><th class="r">SALDO</th></tr></thead><tbody>${filas}</tbody>
+      <tfoot><tr><td colspan="2" style="text-align:right">TOTALES</td><td class="r mono" style="color:var(--acc3)">${S(d.D)}</td><td class="r mono" style="color:var(--acc4)">${S(d.H)}</td><td class="r mono">${S(Math.abs(saldo))}</td></tr></tfoot></table></div></div>`;
+  }).join('');
+
+  return `<div class="ph"><h1>📒 Libro Mayor</h1><p>${esc(cl.razonSocial||'—')} · ${ST.periodoActivo} · ${Object.keys(ctas).length} cuentas</p></div>
+  ${Object.keys(ctas).length?cards:'<div class="empty"><div class="ei">📒</div><p>Sin movimientos. Registra asientos en el Libro Diario.</p></div>'}`;
+}
+
+// ══════════════════════════════════════════════════════
+// BALANCE DE COMPROBACIÓN
+// ══════════════════════════════════════════════════════
+function renderBalance() {
+  const cl=ST.clientes.find(c=>c.id===ST.clienteActivo)||{};
+  const ctas={};
+  getData('asientos').forEach(a=>a.partidas.forEach(p=>{if(!p.cta)return;if(!ctas[p.cta])ctas[p.cta]={D:0,H:0};ctas[p.cta].D+=p.D;ctas[p.cta].H+=p.H;}));
+  let tD=0,tH=0,tSD=0,tSH=0;
+  const rows=Object.entries(ctas).sort((a,b)=>a[0].localeCompare(b[0])).map(([c,d])=>{
+    const s=d.D-d.H,sD=s>=0?s:0,sH=s<0?Math.abs(s):0;
+    tD+=d.D;tH+=d.H;tSD+=sD;tSH+=sH;
+    return `<tr><td style="font-family:var(--fm);font-size:11px;font-weight:700;color:var(--acc)">${c}</td><td>${PCGE_SEL.find(([k])=>k===c)?.[1]||c}</td><td class="r mono" style="color:var(--acc3)">${S(d.D)}</td><td class="r mono" style="color:var(--acc4)">${S(d.H)}</td><td class="r mono" style="color:var(--acc3)">${sD>0?S(sD):'—'}</td><td class="r mono" style="color:var(--acc4)">${sH>0?S(sH):'—'}</td></tr>`;
+  }).join('');
+  const ok=Math.abs(tD-tH)<0.01;
+
+  return `<div class="ph"><div class="ph-row"><div><h1>⚖ Balance de Comprobación</h1><p>${esc(cl.razonSocial||'—')} · ${ST.periodoActivo}</p></div>
+  <span class="badge ${ok?'bs':'bd'}" style="font-size:13px;padding:6px 16px">${ok?'✓ CUADRA':'✕ NO CUADRA'}</span></div></div>
+  <div class="card"><div class="tw"><table>
+    <thead><tr><th>Cuenta</th><th>Nombre</th><th class="r" style="color:var(--acc3)">DEBE</th><th class="r" style="color:var(--acc4)">HABER</th><th class="r" style="color:var(--acc3)">SALDO DEUDOR</th><th class="r" style="color:var(--acc4)">SALDO ACREEDOR</th></tr></thead>
+    <tbody>${rows||'<tr><td colspan="6"><div class="empty"><div class="ei">⚖</div><p>Sin movimientos</p></div></td></tr>'}</tbody>
+    <tfoot><tr style="background:var(--acc);color:white"><td colspan="2" style="padding:10px 12px;text-align:right;font-weight:800">TOTALES</td><td class="r mono" style="padding:10px 12px">${S(tD)}</td><td class="r mono" style="padding:10px 12px">${S(tH)}</td><td class="r mono" style="padding:10px 12px">${S(tSD)}</td><td class="r mono" style="padding:10px 12px">${S(tSH)}</td></tr></tfoot>
+  </table></div></div>`;
+}
+
+// ══════════════════════════════════════════════════════
+// REGISTRO DE VENTAS
+// ══════════════════════════════════════════════════════
+function renderVentas() {
+  const vs=getData('ventas');
+  const tB=vs.reduce((s,v)=>s+v.base,0),tI=vs.reduce((s,v)=>s+v.igv,0),tT=vs.reduce((s,v)=>s+v.total,0);
+  const rows=vs.map(v=>`<tr><td style="font-family:var(--fm);font-size:11px">${v.fecha}</td><td style="font-size:11px">${v.tipoDoc==='01'?'Factura':'Boleta'}</td><td style="font-family:var(--fm);font-size:11px">${v.serie}-${v.numero}</td><td style="font-family:var(--fm);font-size:11px">${v.rucCli}</td><td style="font-weight:500">${esc(v.cliente)}</td><td class="r mono" style="color:var(--acc3)">${S(v.base)}</td><td class="r mono" style="color:var(--acc4)">${S(v.igv)}</td><td class="r mono strong">${S(v.total)}</td><td><span class="badge bs">✓</span></td><td><button class="btn btn-s btn-d" onclick="delVenta('${v.id}')">✕</button></td></tr>`).join('');
+  return `<div class="ph"><div class="ph-row"><div><h1>📈 Registro de Ventas</h1><p>${ST.periodoActivo} · Formato SUNAT</p></div>
+  <button class="btn btn-p" onclick="openVentaModal()">+ Nueva Venta</button></div></div>
+  <div class="sg" style="grid-template-columns:repeat(3,1fr)"><div class="sc" style="--ac:var(--acc3)"><div class="sl">BASE IMPONIBLE</div><div class="sv" style="color:var(--acc3)">${S(tB)}</div></div><div class="sc" style="--ac:var(--acc4)"><div class="sl">IGV DÉBITO</div><div class="sv" style="color:var(--acc4)">${S(tI)}</div></div><div class="sc"><div class="sl">TOTAL VENTAS</div><div class="sv">${S(tT)}</div></div></div>
+  <div class="card"><div class="tw"><table><thead><tr><th>Fecha</th><th>Tipo</th><th>Serie-Nro.</th><th>RUC</th><th>Cliente</th><th class="r">Base</th><th class="r">IGV</th><th class="r">Total</th><th>Est.</th><th></th></tr></thead>
+  <tbody>${rows||'<tr><td colspan="10"><div class="empty"><div class="ei">📈</div><p>Sin ventas</p></div></td></tr>'}</tbody>
+  <tfoot><tr><td colspan="5">TOTALES</td><td class="r mono" style="color:var(--acc3)">${S(tB)}</td><td class="r mono" style="color:var(--acc4)">${S(tI)}</td><td class="r mono strong">${S(tT)}</td><td colspan="2"></td></tr></tfoot></table></div></div>`;
+}
+
+function openVentaModal(){
+  $('modal-root').innerHTML=`<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="modal modal-lg"><div class="mh"><span class="mt">Nueva Venta</span><button class="btn btn-g btn-s" onclick="closeModal()">✕</button></div>
+  <div class="fg2"><div class="fg"><label class="fl">Fecha</label><input class="fi" id="v-f" type="date" value="${today()}"/></div>
+  <div class="fg"><label class="fl">Tipo</label><select class="fsel" id="v-t"><option value="01">01 - Factura</option><option value="03">03 - Boleta</option></select></div>
+  <div class="fg"><label class="fl">Serie</label><input class="fi" id="v-s" value="F001"/></div>
+  <div class="fg"><label class="fl">Número</label><input class="fi" id="v-n" placeholder="0001"/></div>
+  <div class="fg"><label class="fl">RUC Cliente</label><input class="fi" id="v-r" placeholder="20123456789"/></div>
+  <div class="fg"><label class="fl">Cliente</label><input class="fi" id="v-c" placeholder="Empresa SAC"/></div>
+  <div class="fg"><label class="fl">Base Imponible</label><input class="fi" id="v-b" type="number" placeholder="0.00" oninput="const b=parseFloat(this.value)||0;$('v-i').value=fmt(b*0.18);$('v-tt').value=fmt(b*1.18)"/></div>
+  <div class="fg"><label class="fl">IGV 18% (auto)</label><input class="fi" id="v-i" readonly/></div>
+  <div class="fg span2"><label class="fl">Total (auto)</label><input class="fi" id="v-tt" readonly/></div></div>
+  <div class="mf"><button class="btn btn-g" onclick="closeModal()">Cancelar</button><button class="btn btn-p" onclick="saveVenta()">Registrar</button></div></div></div>`;
+}
+function saveVenta(){const b=parseFloat($('v-b')?.value)||0;if(!b){notify('Ingresa base','err');return;}const v={id:'V'+Date.now(),fecha:$('v-f').value,tipoDoc:$('v-t').value,serie:$('v-s').value,numero:$('v-n').value,rucCli:$('v-r').value,cliente:$('v-c').value,base:b,igv:b*0.18,total:b*1.18,estado:'aceptado'};getData('ventas').unshift(v);notify('Venta registrada ✓');closeModal();renderModule('ventas');}
+function delVenta(id){if(!confirm('¿Eliminar?'))return;setData('ventas',getData('ventas').filter(v=>v.id!==id));notify('Eliminado');renderModule('ventas');}
+
+// ══════════════════════════════════════════════════════
+// REGISTRO DE COMPRAS
+// ══════════════════════════════════════════════════════
+function renderCompras(){
+  const cs=getData('compras');
+  const tB=cs.reduce((s,c)=>s+c.base,0),tI=cs.reduce((s,c)=>s+c.igv,0),tC=cs.filter(c=>c.credito).reduce((s,c)=>s+c.igv,0);
+  const rows=cs.map(c=>`<tr><td style="font-family:var(--fm);font-size:11px">${c.fecha}</td><td style="font-family:var(--fm);font-size:11px">${c.serie}-${c.numero}</td><td style="font-family:var(--fm);font-size:11px">${c.rucProv}</td><td style="font-weight:500">${esc(c.proveedor)}</td><td class="r mono">${S(c.base)}</td><td class="r mono" style="color:var(--acc4)">${S(c.igv)}</td><td class="r mono strong">${S(c.total)}</td><td style="text-align:center"><input type="checkbox" ${c.credito?'checked':''} onchange="c.credito=this.checked;renderModule('compras')" style="cursor:pointer;width:15px;height:15px"/></td><td><button class="btn btn-s btn-d" onclick="delCompra('${c.id}')">✕</button></td></tr>`).join('');
+  return `<div class="ph"><div class="ph-row"><div><h1>📉 Registro de Compras</h1><p>${ST.periodoActivo} · Formato SUNAT</p></div><button class="btn btn-p" onclick="openCompraModal()">+ Nueva Compra</button></div></div>
+  <div class="sg" style="grid-template-columns:repeat(4,1fr)"><div class="sc"><div class="sl">BASE</div><div class="sv">${S(tB)}</div></div><div class="sc" style="--ac:var(--acc4)"><div class="sl">IGV TOTAL</div><div class="sv" style="color:var(--acc4)">${S(tI)}</div></div><div class="sc" style="--ac:var(--acc3)"><div class="sl">CRÉDITO FISCAL</div><div class="sv" style="color:var(--acc3)">${S(tC)}</div></div><div class="sc"><div class="sl">TOTAL</div><div class="sv">${S(cs.reduce((s,c)=>s+c.total,0))}</div></div></div>
+  <div class="card"><div class="tw"><table><thead><tr><th>Fecha</th><th>Serie-Nro.</th><th>RUC</th><th>Proveedor</th><th class="r">Base</th><th class="r">IGV</th><th class="r">Total</th><th style="text-align:center">Crédito</th><th></th></tr></thead>
+  <tbody>${rows||'<tr><td colspan="9"><div class="empty"><div class="ei">📉</div><p>Sin compras</p></div></td></tr>'}</tbody>
+  <tfoot><tr><td colspan="4">TOTALES</td><td class="r mono">${S(tB)}</td><td class="r mono" style="color:var(--acc4)">${S(tI)}</td><td class="r mono strong">${S(cs.reduce((s,c)=>s+c.total,0))}</td><td colspan="2"></td></tr></tfoot></table></div></div>`;
+}
+function openCompraModal(){$('modal-root').innerHTML=`<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="modal modal-lg"><div class="mh"><span class="mt">Nueva Compra</span><button class="btn btn-g btn-s" onclick="closeModal()">✕</button></div>
+<div class="fg2"><div class="fg"><label class="fl">Fecha</label><input class="fi" id="cm-f" type="date" value="${today()}"/></div>
+<div class="fg"><label class="fl">Serie</label><input class="fi" id="cm-s" placeholder="F001"/></div>
+<div class="fg"><label class="fl">Número</label><input class="fi" id="cm-n" placeholder="0001"/></div>
+<div class="fg"><label class="fl">RUC Proveedor</label><input class="fi" id="cm-r"/></div>
+<div class="fg span2"><label class="fl">Proveedor</label><input class="fi" id="cm-p" placeholder="Empresa SAC"/></div>
+<div class="fg"><label class="fl">Base Imponible</label><input class="fi" id="cm-b" type="number" oninput="const b=parseFloat(this.value)||0;$('cm-i').value=fmt(b*0.18);$('cm-t').value=fmt(b*1.18)"/></div>
+<div class="fg"><label class="fl">IGV (auto)</label><input class="fi" id="cm-i" readonly/></div>
+<div class="fg span2"><label class="fl">Total (auto)</label><input class="fi" id="cm-t" readonly/></div>
+<div class="fg span2"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="cm-c" checked style="width:15px;height:15px"/><span class="fl" style="margin:0">Usar como crédito fiscal</span></label></div></div>
+<div class="mf"><button class="btn btn-g" onclick="closeModal()">Cancelar</button><button class="btn btn-p" onclick="saveCompra()">Registrar</button></div></div></div>`;}
+function saveCompra(){const b=parseFloat($('cm-b')?.value)||0;if(!b){notify('Ingresa base','err');return;}getData('compras').unshift({id:'C'+Date.now(),fecha:$('cm-f').value,tipoDoc:'01',serie:$('cm-s').value,numero:$('cm-n').value,rucProv:$('cm-r').value,proveedor:$('cm-p').value,base:b,igv:b*0.18,total:b*1.18,credito:$('cm-c')?.checked});notify('Compra registrada ✓');closeModal();renderModule('compras');}
+function delCompra(id){if(!confirm('¿Eliminar?'))return;setData('compras',getData('compras').filter(c=>c.id!==id));notify('Eliminado');renderModule('compras');}
+
+// ══════════════════════════════════════════════════════
+// PDT 621
+// ══════════════════════════════════════════════════════
+function renderPDT621(){
+  const cl=ST.clientes.find(c=>c.id===ST.clienteActivo)||{};
+  const i=calcImpuestos();
+  return `<div class="ph"><div class="ph-row"><div><h1>🧮 PDT 621 — Cálculo Automático</h1><p>${esc(cl.razonSocial||'—')} · RUC: ${esc(cl.ruc||'—')} · ${ST.periodoActivo}</p></div>
+  <button class="btn btn-green" onclick="exportarPDT()">⬇ Excel PDT</button></div></div>
+  <div class="g2" style="margin-bottom:16px">
+    <div class="pdt-box"><div class="pdt-title">📊 IGV Mensual</div>
+    <div class="pdt-section">VENTAS</div>
+    <div class="pdt-row"><span class="pdt-lbl">Base imponible ventas</span><span class="pdt-val neutral">${S(i.bV)}</span></div>
+    <div class="pdt-row"><span class="pdt-lbl">IGV débito fiscal (18%)</span><span class="pdt-val neg">${S(i.igvV)}</span></div>
+    <div class="pdt-section">COMPRAS</div>
+    <div class="pdt-row"><span class="pdt-lbl">IGV crédito fiscal</span><span class="pdt-val pos">${S(i.igvC)}</span></div>
+    <div class="pdt-row total"><span class="pdt-lbl">IGV A PAGAR</span><span class="pdt-val neg">${S(i.igvP)}</span></div></div>
+    <div class="pdt-box"><div class="pdt-title">💰 Pago a Cuenta IR</div>
+    <div class="pdt-row"><span class="pdt-lbl">Régimen</span><span class="pdt-val neutral">${esc(cl.regimen||'—')}</span></div>
+    <div class="pdt-row"><span class="pdt-lbl">Ingresos del período</span><span class="pdt-val neutral">${S(i.bV)}</span></div>
+    <div class="pdt-row"><span class="pdt-lbl">Coeficiente</span><span class="pdt-val neutral">${(i.coef*100).toFixed(1)}%</span></div>
+    <div class="pdt-row"><span class="pdt-lbl">Pago a cuenta IR</span><span class="pdt-val neg">${S(i.pagoCta)}</span></div>
+    <div style="margin-top:14px;padding:14px;background:rgba(255,255,255,.1);border-radius:8px">
+      <div class="pdt-row"><span class="pdt-lbl">IGV</span><span class="pdt-val neg">${S(i.igvP)}</span></div>
+      <div class="pdt-row"><span class="pdt-lbl">Renta</span><span class="pdt-val neg">${S(i.pagoCta)}</span></div>
+      <div class="pdt-row total"><span class="pdt-lbl">TOTAL SUNAT</span><span class="pdt-val neg">${S(i.total)}</span></div>
+    </div></div>
+  </div>
+  <div class="card"><div class="ch"><span class="ct">Detalle Casillas PDT 621</span></div>
+  <table><thead><tr><th>Campo</th><th>Casilla</th><th>Valor</th><th>Fuente</th></tr></thead><tbody>
+  ${[['Base imponible ventas','100',S(i.bV),getData('ventas').length+' comprobantes'],['IGV débito fiscal','101',S(i.igvV),'18% de base'],['IGV crédito fiscal','108',S(i.igvC),getData('compras').filter(c=>c.credito).length+' con crédito'],['IGV a pagar','109',S(i.igvP),'Débito − Crédito'],['Ingresos para pago a cta.','301',S(i.bV),'Base ventas'],['Coeficiente','302',(i.coef*100).toFixed(1)+'%',esc(cl.regimen||'')],['Pago a cuenta IR','303',S(i.pagoCta),'Ingresos × Coef.'],['TOTAL A PAGAR','—',S(i.total),'IGV + Renta']].map(([c,cas,val,f])=>`<tr><td style="font-weight:500">${c}</td><td><span class="badge bi mono">${cas}</span></td><td class="mono strong" style="color:var(--acc)">${val}</td><td style="font-size:12px;color:var(--txt2)">${f}</td></tr>`).join('')}
+  </tbody></table></div>`;
+}
+function exportarPDT(){const cl=ST.clientes.find(c=>c.id===ST.clienteActivo)||{},i=calcImpuestos();const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['PDT 621 — '+cl.razonSocial],['RUC',cl.ruc],['Período',ST.periodoActivo],[],['Campo','Casilla','Valor'],['Base ventas','100',i.bV],['IGV débito','101',i.igvV],['IGV crédito','108',i.igvC],['IGV a pagar','109',i.igvP],['Base renta','301',i.bV],['Coeficiente','302',(i.coef*100).toFixed(1)+'%'],['Pago cta. IR','303',i.pagoCta],['TOTAL','—',i.total]]),'PDT 621');XLSX.writeFile(wb,`PDT621_${cl.ruc}_${ST.periodoActivo}.xlsx`);notify('PDT 621 exportado ✓');}
+
+// ══════════════════════════════════════════════════════
+// PLANILLA
+// ══════════════════════════════════════════════════════
+let planTab='mensual';
+function renderPlanilla(){
+  const cl=ST.clientes.find(c=>c.id===ST.clienteActivo)||{};
+  const p=calcPlanillaTotal(), n=getData('trabajadores').length;
+  return `<div class="ph"><div class="ph-row"><div><h1>💰 Planilla y Beneficios Sociales</h1><p>${esc(cl.razonSocial||'—')} · ${ST.periodoActivo}</p></div>
+  <div style="display:flex;gap:9px"><button class="btn btn-p" onclick="openTrabModal()">+ Trabajador</button>
+  <button class="btn btn-gold" onclick="genAsientoPlanilla()">⚡ Generar Asiento</button></div></div></div>
+  <div class="sg" style="grid-template-columns:repeat(7,1fr)">
+    <div class="sc"><div class="sl">TRABAJADORES</div><div class="sv">${n}</div></div>
+    <div class="sc" style="--ac:var(--acc3)"><div class="sl">SUELDOS</div><div class="sv" style="font-size:14px;color:var(--acc3)">${S(p.sueldos)}</div></div>
+    <div class="sc" style="--ac:var(--acc6)"><div class="sl">ESSALUD</div><div class="sv" style="font-size:14px;color:var(--acc6)">${S(p.essalud)}</div></div>
+    <div class="sc" style="--ac:var(--acc2)"><div class="sl">CTS</div><div class="sv" style="font-size:14px;color:var(--acc2)">${S(p.cts)}</div></div>
+    <div class="sc" style="--ac:var(--acc5)"><div class="sl">VACACIONES</div><div class="sv" style="font-size:14px;color:var(--acc5)">${S(p.vac)}</div></div>
+    <div class="sc" style="--ac:var(--acc4)"><div class="sl">GRATIS.</div><div class="sv" style="font-size:14px;color:var(--acc4)">${S(p.grati)}</div></div>
+    <div class="sc"><div class="sl">COSTO TOTAL</div><div class="sv" style="font-size:14px">${S(p.costo)}</div></div>
+  </div>
+  <div class="card">
+    <div class="tabs">${['mensual','cts','vacaciones','gratificaciones','asiento'].map(t=>`<button class="tab ${planTab===t?'active':''}" onclick="planTab='${t}';renderModule('planilla')">${{mensual:'Planilla',cts:'CTS',vacaciones:'Vacaciones',gratificaciones:'Gratificaciones',asiento:'Asiento'}[t]}</button>`).join('')}</div>
+    ${renderPlanTab()}
+  </div>`;
+}
+
+function renderPlanTab(){
+  const trabs=getData('trabajadores');
+  if(planTab==='asiento') return renderAPBox(buildAsientoPlanilla(),'Asiento de Provisión de Planilla — '+ST.periodoActivo);
+  const cols={mensual:['Nombre / AFP','Sueldo','ESSALUD','Desc.Trab.','Neto','CTS','Vacac.','Gratis.','Costo'],cts:['Nombre','Sueldo','ESSALUD','CTS Mensual','Depósito Sem.','Total Anual'],vacaciones:['Nombre','Sueldo','Vacac. Mensual','Total Anual','Pago Vacacional'],gratificaciones:['Nombre','Sueldo','Prov. Gratis.','Bonif.9%','Total Mensual','Anual (x2)']};
+  const rows=trabs.map(t=>{
+    const c=calcTrab(t);
+    if(planTab==='mensual') return `<tr><td><div style="font-weight:600">${esc(t.nombre)}</div><div style="font-size:11px;color:var(--txt2)">${esc(t.cargo)} · ${t.afp}${t.regLaboral==='mype'?' · <span class="badge bp" style="font-size:10px">MYPE</span>':''}</div></td><td class="r mono">${S(c.s)}</td><td class="r mono">${S(c.essalud)}</td><td class="r mono" style="color:var(--acc4)">${S(c.descTrab)}</td><td class="r mono" style="color:var(--acc3);font-weight:700">${S(c.neto)}</td><td class="r mono">${S(c.cts)}</td><td class="r mono">${S(c.vac)}</td><td class="r mono">${S(c.grati)}</td><td class="r mono strong">${S(c.costo)}</td></tr>`;
+    if(planTab==='cts') return `<tr><td><div style="font-weight:600">${esc(t.nombre)}</div></td><td class="r mono">${S(c.s)}</td><td class="r mono">${S(c.essalud)}</td><td class="r mono" style="color:var(--acc2);font-weight:700">${S(c.cts)}</td><td class="r mono">${S(c.cts*6)}</td><td class="r mono">${S(c.cts*12)}</td></tr>`;
+    if(planTab==='vacaciones') return `<tr><td><div style="font-weight:600">${esc(t.nombre)}</div><div style="font-size:11px;color:var(--txt2)">${t.regLaboral==='mype'?'15 días':'30 días'}</div></td><td class="r mono">${S(c.s)}</td><td class="r mono" style="color:var(--acc5);font-weight:700">${S(c.vac)}</td><td class="r mono">${S(c.vac*12)}</td><td class="r mono">${S(c.s/(t.regLaboral==='mype'?2:1))}</td></tr>`;
+    if(planTab==='gratificaciones') return `<tr><td><div style="font-weight:600">${esc(t.nombre)}</div></td><td class="r mono">${S(c.s)}</td><td class="r mono" style="color:var(--acc4);font-weight:700">${S(c.grati)}</td><td class="r mono">${S(c.bonifExtra)}</td><td class="r mono">${S(c.grati+c.bonifExtra)}</td><td class="r mono">${S((c.grati+c.bonifExtra)*2)}</td></tr>`;
+    return '';
+  }).join('');
+  const p=calcPlanillaTotal();
+  const tfootMap={mensual:`<tr><td>TOTALES</td><td class="r mono">${S(p.sueldos)}</td><td class="r mono">${S(p.essalud)}</td><td class="r mono">${S(p.desc)}</td><td class="r mono" style="color:var(--acc3)">${S(p.sueldos-p.desc)}</td><td class="r mono">${S(p.cts)}</td><td class="r mono">${S(p.vac)}</td><td class="r mono">${S(p.grati)}</td><td class="r mono strong">${S(p.costo)}</td></tr>`,cts:`<tr><td>TOTALES</td><td></td><td></td><td class="r mono" style="color:var(--acc2)">${S(p.cts)}</td><td class="r mono">${S(p.cts*6)}</td><td class="r mono">${S(p.cts*12)}</td></tr>`,vacaciones:`<tr><td>TOTALES</td><td></td><td class="r mono" style="color:var(--acc5)">${S(p.vac)}</td><td class="r mono">${S(p.vac*12)}</td><td></td></tr>`,gratificaciones:`<tr><td>TOTALES</td><td></td><td class="r mono">${S(p.grati)}</td><td class="r mono">${S(p.bonif)}</td><td class="r mono">${S(p.grati+p.bonif)}</td><td class="r mono">${S((p.grati+p.bonif)*2)}</td></tr>`};
+  return `<div class="tw"><table><thead><tr>${cols[planTab].map(c=>`<th>${c}</th>`).join('')}<th></th></tr></thead><tbody>${rows}</tbody><tfoot>${tfootMap[planTab]||''}</tfoot></table></div>`;
+}
+
+function openTrabModal(data=null){
+  const d=data||{nombre:'',cargo:'',remuneracion:'',afp:'Prima',regLaboral:'general'};
+  const isE=!!data;
+  $('modal-root').innerHTML=`<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="modal modal-lg"><div class="mh"><span class="mt">${isE?'Editar':'Nuevo'} Trabajador</span><button class="btn btn-g btn-s" onclick="closeModal()">✕</button></div>
+  <div class="fg2">
+    <div class="fg span2"><label class="fl">Nombre completo *</label><input class="fi" id="tr-n" value="${esc(d.nombre)}"/></div>
+    <div class="fg"><label class="fl">Cargo</label><input class="fi" id="tr-c" value="${esc(d.cargo)}"/></div>
+    <div class="fg"><label class="fl">Remuneración bruta (S/) *</label><input class="fi" id="tr-r" type="number" value="${d.remuneracion}" oninput="prevTrab()"/></div>
+    <div class="fg"><label class="fl">AFP / Sistema pensión</label><select class="fsel" id="tr-a" onchange="prevTrab()">${Object.keys(AFP_RATES).map(a=>`<option ${d.afp===a?'selected':''}>${a}</option>`).join('')}</select></div>
+    <div class="fg"><label class="fl">Régimen laboral</label><select class="fsel" id="tr-rl" onchange="prevTrab()"><option value="general" ${d.regLaboral==='general'?'selected':''}>General (D.Leg. 728)</option><option value="mype" ${d.regLaboral==='mype'?'selected':''}>Pequeña Empresa MYPE</option></select></div>
+  </div>
+  <div id="trab-prev" style="margin-top:12px"></div>
+  <div class="mf"><button class="btn btn-g" onclick="closeModal()">Cancelar</button><button class="btn btn-p" onclick="saveTrab(${isE?`'${data.id}'`:'null'})">${isE?'Guardar':'Registrar'}</button></div></div></div>`;
+  setTimeout(prevTrab,80);
+}
+function prevTrab(){const rem=parseFloat($('tr-r')?.value)||0,afp=$('tr-a')?.value||'Prima',reg=$('tr-rl')?.value||'general';if(!rem)return;const c=calcTrab({remuneracion:rem,afp,regLaboral:reg});const el=$('trab-prev');if(!el)return;el.innerHTML=`<div style="background:var(--bg3);border-radius:var(--r2);padding:12px"><div style="font-size:10px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">Vista previa del costo</div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">${[['Sueldo bruto',c.s,'var(--acc)'],['ESSALUD',c.essalud,'var(--acc6)'],['CTS',c.cts,'var(--acc2)'],['Vacaciones',c.vac,'var(--acc5)'],['Gratificación',c.grati,'var(--acc4)'],['AFP/ONP trab.',c.descTrab,'var(--acc4)'],['Neto trabajador',c.neto,'var(--acc3)'],['COSTO EMPRESA',c.costo,'var(--acc)']].map(([l,v,col])=>`<div style="text-align:center;padding:8px;background:white;border-radius:6px"><div style="font-size:10px;color:var(--txt3);margin-bottom:2px">${l}</div><div style="font-family:var(--fm);font-weight:700;color:${col};font-size:12px">${S(v)}</div></div>`).join('')}</div></div>`;}
+function saveTrab(editId){const nom=$('tr-n')?.value.trim(),rem=parseFloat($('tr-r')?.value)||0;if(!nom||!rem){notify('Nombre y remuneración requeridos','err');return;}const obj={nombre:nom,cargo:$('tr-c').value,remuneracion:rem,afp:$('tr-a').value,regLaboral:$('tr-rl').value};const arr=getData('trabajadores');if(editId){const idx=arr.findIndex(t=>t.id===editId);if(idx>=0)arr[idx]={...arr[idx],...obj};notify('Actualizado ✓');}else{arr.unshift({id:'T'+Date.now(),...obj});notify('Trabajador registrado ✓');}closeModal();renderModule('planilla');}
+function genAsientoPlanilla(){const arr=getData('asientos');const p=buildAsientoPlanilla();arr.unshift({id:'AP'+Date.now(),fecha:today(),numero:String(arr.length+1).padStart(3,'0'),glosa:'Provisión planilla — '+ST.periodoActivo,partidas:p});notify('Asiento de planilla generado ✓');renderModule('diario');}
+
+// ══════════════════════════════════════════════════════
+// DEPRECIACIÓN
+// ══════════════════════════════════════════════════════
+function renderDepreciacion(){
+  const cl=ST.clientes.find(c=>c.id===ST.clienteActivo)||{};
+  const activos=getData('activos');
+  const total=activos.reduce((s,a)=>s+calcDepAct(a).m,0);
+  const cards=activos.map(a=>{
+    const d=calcDepAct(a),pct=Math.min(100,(a.acum/a.valor)*100);
+    return `<div class="card" style="margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+      <div><div style="font-weight:700;font-size:14px">${esc(a.desc)}</div><div style="font-size:12px;color:var(--txt2)">${a.cat} · ${a.fecha} · ${a.vida} años vida útil</div></div>
+      <div style="display:flex;gap:6px"><button class="btn btn-s btn-g" onclick="openActivoModal(getData('activos').find(x=>x.id==='${a.id}'))">✎</button><button class="btn btn-s btn-d" onclick="delActivo('${a.id}')">✕</button></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:10px">
+      ${[['Valor Original',a.valor,'var(--acc)'],['Dep. Mensual',d.m,'var(--acc5)'],['Dep. Anual',d.anual,'var(--txt2)'],['Dep. Acumulada',d.acum,'var(--acc4)'],['Valor Neto',d.neto,'var(--acc3)']].map(([l,v,col])=>`<div><div style="font-size:10px;color:var(--txt3);margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px">${l}</div><div style="font-family:var(--fm);font-weight:700;color:${col}">${S(v)}</div></div>`).join('')}
+    </div>
+    <div class="prog"><div class="prog-fill" style="width:${pct}%;background:${pct>90?'var(--acc4)':pct>60?'var(--acc2)':'var(--acc5)'}"></div></div>
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--txt3);margin-top:4px"><span>Depreciado: ${fmt(pct)}%</span><span>${d.meses} meses restantes</span></div></div>`;
+  }).join('');
+
+  return `<div class="ph"><div class="ph-row"><div><h1>📉 Depreciación de Activos Fijos</h1><p>${esc(cl.razonSocial||'—')} · Línea recta SUNAT</p></div>
+  <div style="display:flex;gap:9px"><button class="btn btn-p" onclick="openActivoModal()">+ Activo Fijo</button><button class="btn btn-gold" onclick="genAsientoDeprec()">⚡ Generar Asiento</button></div></div></div>
+  <div class="sg" style="grid-template-columns:repeat(4,1fr)"><div class="sc"><div class="sl">ACTIVOS</div><div class="sv">${activos.length}</div></div><div class="sc"><div class="sl">VALOR TOTAL</div><div class="sv" style="font-size:14px">${S(activos.reduce((s,a)=>s+a.valor,0))}</div></div><div class="sc" style="--ac:var(--acc5)"><div class="sl">DEP. MENSUAL</div><div class="sv" style="font-size:14px;color:var(--acc5)">${S(total)}</div></div><div class="sc" style="--ac:var(--acc3)"><div class="sl">VALOR NETO</div><div class="sv" style="font-size:14px;color:var(--acc3)">${S(activos.reduce((s,a)=>s+calcDepAct(a).neto,0))}</div></div></div>
+  ${activos.length?cards:'<div class="empty"><div class="ei">📉</div><p>Sin activos fijos</p></div>'}
+  ${activos.length?renderAPBox(buildAsientoDeprec(),'Asiento de Depreciación Mensual'):''}`;
+}
+
+function openActivoModal(data=null){
+  const d=data||{desc:'',cat:'Equipos de Cómputo',valor:'',fecha:today(),vida:4,acum:0};
+  const isE=!!data;
+  $('modal-root').innerHTML=`<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="modal"><div class="mh"><span class="mt">${isE?'Editar':'Nuevo'} Activo Fijo</span><button class="btn btn-g btn-s" onclick="closeModal()">✕</button></div>
+  <div class="fg"><label class="fl">Descripción *</label><input class="fi" id="ac-d" value="${esc(d.desc)}"/></div>
+  <div class="fg2"><div class="fg"><label class="fl">Categoría</label><select class="fsel" id="ac-c">${['Edificios y Construcciones','Unidades de Transporte','Maquinaria y Equipo','Equipos de Cómputo','Muebles y Enseres','Otros Activos'].map(c=>`<option ${d.cat===c?'selected':''}>${c}</option>`).join('')}</select></div>
+  <div class="fg"><label class="fl">Valor Adquisición (S/)</label><input class="fi" id="ac-v" type="number" value="${d.valor}"/></div>
+  <div class="fg"><label class="fl">Fecha Adquisición</label><input class="fi" id="ac-f" type="date" value="${d.fecha}"/></div>
+  <div class="fg"><label class="fl">Vida Útil (años)</label><input class="fi" id="ac-vida" type="number" value="${d.vida}" min="1" max="40"/></div>
+  <div class="fg span2"><label class="fl">Dep. Acumulada Anterior (S/)</label><input class="fi" id="ac-a" type="number" value="${d.acum}"/></div></div>
+  <div class="mf"><button class="btn btn-g" onclick="closeModal()">Cancelar</button><button class="btn btn-p" onclick="saveActivo(${isE?`'${data.id}'`:'null'})">${isE?'Guardar':'Registrar'}</button></div></div></div>`;
+}
+function saveActivo(editId){const desc=$('ac-d').value,val=parseFloat($('ac-v').value)||0;if(!desc||!val){notify('Descripción y valor requeridos','err');return;}const obj={desc,cat:$('ac-c').value,valor:val,fecha:$('ac-f').value,vida:parseInt($('ac-vida').value)||4,acum:parseFloat($('ac-a').value)||0};const arr=getData('activos');if(editId){const idx=arr.findIndex(a=>a.id===editId);if(idx>=0)arr[idx]={...arr[idx],...obj};notify('Actualizado ✓');}else{arr.push({id:'A'+Date.now(),...obj});notify('Activo registrado ✓');}closeModal();renderModule('depreciacion');}
+function delActivo(id){if(!confirm('¿Eliminar?'))return;setData('activos',getData('activos').filter(a=>a.id!==id));notify('Eliminado');renderModule('depreciacion');}
+function genAsientoDeprec(){const arr=getData('asientos'),ps=buildAsientoDeprec();if(!ps.length){notify('Sin activos','err');return;}arr.unshift({id:'AD'+Date.now(),fecha:today(),numero:String(arr.length+1).padStart(3,'0'),glosa:'Depreciación activos fijos — '+ST.periodoActivo,partidas:ps});notify('Asiento de depreciación generado ✓');renderModule('diario');}
+
+// ══════════════════════════════════════════════════════
+// COBRANZA DUDOSA
+// ══════════════════════════════════════════════════════
+function renderIncobrables(){
+  const items=getData('incobrables');
+  const total=items.reduce((s,i)=>s+provIncob(i),0);
+  const rows=items.map(i=>{const prov=provIncob(i),pct=prov/i.monto;return `<div style="background:var(--bg2);border:1px solid ${pct>=0.2?'#ffd0d0':'var(--brd)'};border-radius:var(--r2);padding:13px 16px;margin-bottom:8px;transition:.13s">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px"><div><div style="font-weight:700">${esc(i.cliente)}</div><div style="font-size:11.5px;color:var(--txt2)">RUC: ${i.ruc} · Vence: ${i.fechaVenc}</div></div>
+    <div style="display:flex;gap:7px"><span class="badge ${i.dias>=180?'bd':'bw'}">${i.dias} días mora</span><button class="btn btn-s btn-d" onclick="delIncob('${i.id}')">✕</button></div></div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+      <div><div style="font-size:10px;color:var(--txt3);margin-bottom:2px">Deuda Total</div><div class="mono strong">${S(i.monto)}</div></div>
+      <div><div style="font-size:10px;color:var(--txt3);margin-bottom:2px">% Provisión</div><div class="mono strong" style="color:var(--acc4)">${fmt(pct*100)}%</div></div>
+      <div><div style="font-size:10px;color:var(--txt3);margin-bottom:2px">Provisión</div><div class="mono strong" style="color:var(--acc4)">${S(prov)}</div></div>
+      <div><div style="font-size:10px;color:var(--txt3);margin-bottom:2px">Clasificación</div><span class="badge ${i.dias>=360?'bd':i.dias>=180?'bd':'bw'}">${i.dias>=360?'Pérdida probable':i.dias>=180?'Alto riesgo':'Seguimiento'}</span></div>
+    </div></div>`;}).join('');
+
+  return `<div class="ph"><div class="ph-row"><div><h1>⚠ Cobranza Dudosa</h1><p>Art. 37(i) LIR · Estimación por días de mora</p></div>
+  <div style="display:flex;gap:9px"><button class="btn btn-p" onclick="openIncobModal()">+ Cuenta</button><button class="btn btn-gold" onclick="genAsientoIncob()">⚡ Generar Asiento</button></div></div></div>
+  <div style="background:#e8f5ee;border-left:4px solid var(--acc3);border-radius:var(--r2);padding:11px 14px;margin-bottom:14px;font-size:12.5px;color:#155724">
+    <strong>Escala SUNAT:</strong> 30–90 días: 5% · 91–180 días: 10% · 181–360 días: 20% · +360 días: 60%
+  </div>
+  <div class="sg" style="grid-template-columns:repeat(3,1fr)">
+    <div class="sc"><div class="sl">CUENTAS</div><div class="sv">${items.length}</div></div>
+    <div class="sc" style="--ac:var(--acc4)"><div class="sl">DEUDA TOTAL</div><div class="sv" style="font-size:14px">${S(items.reduce((s,i)=>s+i.monto,0))}</div></div>
+    <div class="sc" style="--ac:var(--acc4)"><div class="sl">PROVISIÓN</div><div class="sv" style="font-size:14px;color:var(--acc4)">${S(total)}</div></div>
+  </div>
+  ${items.length?rows:'<div class="empty"><div class="ei">✅</div><p>Sin deudas incobrables</p></div>'}
+  ${items.length?renderAPBox(buildAsientoIncob(),'Asiento de Provisión de Cobranza Dudosa'):''}`;
+}
+
+function openIncobModal(){$('modal-root').innerHTML=`<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="modal"><div class="mh"><span class="mt">Nueva Cuenta Dudosa</span><button class="btn btn-g btn-s" onclick="closeModal()">✕</button></div>
+<div class="fg"><label class="fl">Cliente / Deudor</label><input class="fi" id="ic-cli"/></div>
+<div class="fg2"><div class="fg"><label class="fl">RUC / DNI</label><input class="fi" id="ic-ruc"/></div><div class="fg"><label class="fl">Monto Deuda (S/)</label><input class="fi" id="ic-m" type="number" oninput="calcIncob()"/></div>
+<div class="fg"><label class="fl">Fecha Vencimiento</label><input class="fi" id="ic-f" type="date"/></div><div class="fg"><label class="fl">Días de Mora</label><input class="fi" id="ic-d" type="number" oninput="calcIncob()"/></div>
+<div class="fg"><label class="fl">% Provisión</label><input class="fi" id="ic-p" readonly/></div><div class="fg"><label class="fl">Monto Provisión</label><input class="fi" id="ic-pv" readonly style="font-weight:700"/></div></div>
+<div class="mf"><button class="btn btn-g" onclick="closeModal()">Cancelar</button><button class="btn btn-p" onclick="saveIncob()">Registrar</button></div></div></div>`;}
+function calcIncob(){const d=parseInt($('ic-d')?.value)||0,m=parseFloat($('ic-m')?.value)||0,pct=d>=360?.6:d>=181?.2:d>=91?.1:d>=30?.05:0;if($('ic-p'))$('ic-p').value=fmt(pct*100)+'%';if($('ic-pv'))$('ic-pv').value='S/ '+fmt(m*pct);}
+function saveIncob(){const cli=$('ic-cli')?.value.trim(),m=parseFloat($('ic-m')?.value)||0;if(!cli||!m){notify('Cliente y monto requeridos','err');return;}const d=parseInt($('ic-d')?.value)||0;getData('incobrables').push({id:'I'+Date.now(),cliente:cli,ruc:$('ic-ruc').value,monto:m,fechaVenc:$('ic-f').value,dias:d});notify('Cuenta registrada ✓');closeModal();renderModule('incobrables');}
+function delIncob(id){if(!confirm('¿Eliminar?'))return;setData('incobrables',getData('incobrables').filter(i=>i.id!==id));notify('Eliminado');renderModule('incobrables');}
+function genAsientoIncob(){const arr=getData('asientos'),ps=buildAsientoIncob();if(!ps.length){notify('Sin cuentas incobrables','err');return;}arr.unshift({id:'AI'+Date.now(),fecha:today(),numero:String(arr.length+1).padStart(3,'0'),glosa:'Provisión cobranza dudosa — '+ST.periodoActivo,partidas:ps});notify('Asiento cobranza dudosa generado ✓');renderModule('diario');}
+
+// ══════════════════════════════════════════════════════
+// DOCUMENTOS
+// ══════════════════════════════════════════════════════
+function renderDocumentos(){
+  const decls=getData('declaraciones').filter(d=>d.archivo);
+  return `<div class="ph"><h1>📁 Documentos PDF</h1><p>Reportes y constancias SUNAT adjuntas</p></div>
+  <div class="card">
+    <div class="ch"><span class="ct">Subir Documento</span></div>
+    <div style="border:2px dashed var(--brd2);border-radius:var(--r);padding:28px;text-align:center;cursor:pointer;background:var(--bg3);transition:.16s" onclick="document.getElementById('doc-file').click()" ondragover="event.preventDefault();this.style.borderColor='var(--acc)'" ondragleave="this.style.borderColor=''" ondrop="event.preventDefault();this.style.borderColor='';handleDocDrop(event)">
+      <input type="file" id="doc-file" accept=".pdf,.xlsx,.xls,.doc,.docx" style="display:none" onchange="handleDocFile(this)"/>
+      <div style="font-size:36px;margin-bottom:8px">📄</div>
+      <p style="font-size:13px;color:var(--txt2)"><strong>Arrastra o selecciona</strong> archivos</p>
+      <p style="font-size:11px;color:var(--txt3);margin-top:4px">PDF, Excel, Word · Reportes SUNAT, declaraciones, constancias</p>
+    </div>
+  </div>
+  ${decls.length?`<div class="card" style="margin-top:14px"><div class="ch"><span class="ct">Documentos Adjuntos</span></div>${decls.map(d=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--brd)"><span style="font-size:20px;color:var(--acc4)">📄</span><div style="flex:1"><div style="font-weight:600;font-size:13px">${esc(d.tipo)} · ${d.periodo}</div><div style="font-size:11px;color:var(--txt3)">${d.archivo?.nombre||'documento.pdf'}</div></div>${d.archivo?.url?`<a href="${d.archivo.url}" target="_blank" class="btn btn-s btn-g">⬇ Ver</a>`:''}</div>`).join('')}</div>`:''}
+  ${!ST.fbOk?`<div style="margin-top:14px;padding:14px;background:#fff8e1;border:1px solid #ffc107;border-radius:var(--r2);font-size:12.5px;color:#856404">💡 <strong>Almacenamiento de archivos:</strong> Configura Firebase Storage para subir y guardar PDFs en la nube permanentemente.</div>`:''}`;
+}
+function handleDocFile(input){if(input.files?.length)notify(`Archivo "${input.files[0].name}" listo. Configura Firebase Storage para guardarlo.`,'info');}
+function handleDocDrop(e){const f=e.dataTransfer?.files?.[0];if(f)notify(`Archivo "${f.name}" recibido. Configura Firebase Storage para guardarlo.`,'info');}
+
+// ══════════════════════════════════════════════════════
+// PLAN DE CUENTAS
+// ══════════════════════════════════════════════════════
+const PCGE_FULL={
+  '10':'EFECTIVO Y EQUIV.','101':'Caja','104':'Cuentas corrientes bancarias','12':'CUENTAS POR COBRAR COMERCIALES','121':'Fact. por cobrar','40':'TRIBUTOS Y APORTES','401':'Gobierno central','4011':'IGV - Cuenta propia','4017':'Impuesto a la renta','41':'REMUNERACIONES POR PAGAR','411':'Remuneraciones','415':'Beneficios sociales','42':'CUENTAS POR PAGAR COMERC.','421':'Fact. por pagar','50':'CAPITAL','501':'Capital social','59':'RESULTADOS ACUMULADOS','591':'Utilidades no distribuidas','60':'COMPRAS','601':'Mercaderías','62':'GASTOS DE PERSONAL','621':'Remuneraciones','625':'Atención al personal','627':'Seguridad y previsión social','63':'SERVICIOS DE TERCEROS','631':'Transporte y correos','632':'Asesoría y consultoría','636':'Servicios básicos','64':'GASTOS POR TRIBUTOS','641':'Gobierno central','65':'OTROS GASTOS GESTIÓN','659':'Otros gastos','68':'VALUACIÓN Y DETERIORO','681':'Depreciación','684':'Valuación de activos','70':'VENTAS','701':'Mercaderías','704':'Prestación de servicios','75':'OTROS INGRESOS','759':'Otros ingresos','77':'INGRESOS FINANCIEROS','19':'ESTIMACIONES ACTIVOS','191':'Estimación cob. dudosa','39':'DEPREC. AMORT. ACUM.','393':'Depreciación acumulada'};
+function renderCuentas(){
+  const rows=Object.entries(PCGE_FULL).map(([c,n])=>`<tr><td style="font-family:var(--fm);font-size:11.5px;font-weight:700;color:var(--acc)">${c}</td><td style="font-size:${c.length<=2?'13px':'12.5px'};font-weight:${c.length<=2?700:400};padding-left:${c.length<=2?12:c.length===3?20:28}px">${n}</td></tr>`).join('');
+  return `<div class="ph"><h1>📋 Plan de Cuentas PCGE</h1><p>Plan Contable General Empresarial · ${Object.keys(PCGE_FULL).length} cuentas</p></div>
+  <div class="card"><div class="tw"><table><thead><tr><th style="width:70px">Código</th><th>Nombre de la Cuenta</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+}
+
+// ══════════════════════════════════════════════════════
+// EXPORTAR EXCEL COMPLETO
+// ══════════════════════════════════════════════════════
+function exportarTodo(){
+  const cl=ST.clientes.find(c=>c.id===ST.clienteActivo)||{};
+  const wb=XLSX.utils.book_new();
+  // Diario
+  const rD=[['N°','Fecha','Glosa','Cuenta','Descripción','Debe','Haber']];
+  getData('asientos').forEach(a=>a.partidas.forEach(p=>rD.push([a.numero,a.fecha,a.glosa,p.cta,p.nom||'',p.D,p.H])));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rD),'Libro Diario');
+  // Ventas
+  const rV=[['Fecha','Tipo','Serie','Número','RUC','Cliente','Base','IGV','Total']];
+  getData('ventas').forEach(v=>rV.push([v.fecha,v.tipoDoc,v.serie,v.numero,v.rucCli,v.cliente,v.base,v.igv,v.total]));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rV),'Reg. Ventas');
+  // Compras
+  const rC=[['Fecha','Serie','Número','RUC Prov.','Proveedor','Base','IGV','Total','Crédito']];
+  getData('compras').forEach(c=>rC.push([c.fecha,c.serie,c.numero,c.rucProv,c.proveedor,c.base,c.igv,c.total,c.credito?'Sí':'No']));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rC),'Reg. Compras');
+  // Planilla
+  const p=calcPlanillaTotal();
+  const rP=[['Trabajador','Cargo','AFP','Sueldo','ESSALUD','Desc.Trab.','Neto','CTS','Vacac.','Gratis.','Costo']];
+  getData('trabajadores').forEach(t=>{const c=calcTrab(t);rP.push([t.nombre,t.cargo,t.afp,c.s,c.essalud,c.descTrab,c.neto,c.cts,c.vac,c.grati,c.costo])});
+  rP.push(['TOTALES','','',p.sueldos,p.essalud,p.desc,p.sueldos-p.desc,p.cts,p.vac,p.grati,p.costo]);
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rP),'Planilla');
+  // Depreciación
+  const rAc=[['Activo','Categoría','Valor','Vida útil','Dep.Mensual','Dep.Anual','Dep.Acum.','Valor Neto']];
+  getData('activos').forEach(a=>{const d=calcDepAct(a);rAc.push([a.desc,a.cat,a.valor,a.vida,d.m,d.anual,d.acum,d.neto])});
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rAc),'Depreciación');
+  // PDT 621
+  const i=calcImpuestos();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['PDT 621 — '+cl.razonSocial],['RUC',cl.ruc],['Período',ST.periodoActivo],[],['Campo','Casilla','Valor'],['Base ventas','100',i.bV],['IGV débito','101',i.igvV],['IGV crédito','108',i.igvC],['IGV a pagar','109',i.igvP],['Pago cta. IR','303',i.pagoCta],['TOTAL','—',i.total]]),'PDT 621');
+  XLSX.writeFile(wb,`ContaGestion_${cl.razonSocial}_${ST.periodoActivo}.xlsx`);
+  notify('Exportación completa: 6 hojas Excel ✓');
+}
+
+// ══════════════════════════════════════════════════════
+// FIREBASE CONFIG MODAL
+// ══════════════════════════════════════════════════════
+function openFBConfig(){
+  $('modal-root').innerHTML=`<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="modal"><div class="mh"><span class="mt">⚙ Configurar Firebase</span><button class="btn btn-g btn-s" onclick="closeModal()">✕</button></div>
+  <p style="font-size:13px;color:var(--txt2);margin-bottom:14px">Ve a <strong>console.firebase.google.com</strong> → Tu proyecto → ⚙ Configuración → Aplicaciones web → Copiar configuración.</p>
+  ${['apiKey:API Key','authDomain:Auth Domain','projectId:Project ID','storageBucket:Storage Bucket','appId:App ID'].map(f=>{const[id,lbl]=f.split(':');return `<div class="fg"><label class="fl">${lbl}</label><input class="fi" id="fb-${id}" placeholder="${id}..."/></div>`;}).join('')}
+  <div style="background:#e8f5ee;border-radius:var(--r2);padding:11px 14px;font-size:12px;color:#155724;margin-top:6px">✅ Una vez configurado, todos los datos se guardan automáticamente en Firebase Firestore.</div>
+  <div class="mf"><button class="btn btn-g" onclick="closeModal()">Cancelar</button><button class="btn btn-p" onclick="saveFBConfig()">Guardar y reconectar</button></div></div></div>`;
+}
+function saveFBConfig(){
+  const cfg={apiKey:$('fb-apiKey')?.value.trim(),authDomain:$('fb-authDomain')?.value.trim(),projectId:$('fb-projectId')?.value.trim(),storageBucket:$('fb-storageBucket')?.value.trim(),appId:$('fb-appId')?.value.trim()};
+  if(!cfg.apiKey||!cfg.projectId){notify('API Key y Project ID son requeridos','err');return;}
+  localStorage.setItem('cgp_fbconfig',JSON.stringify(cfg));
+  notify('Configuración guardada. Recarga la página para activar Firebase.','info');
+  closeModal();
+}
+
+// ══════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════
+document.addEventListener('fb-ready',()=>{
+  ST.fbReady=true;
+  if(window.FB_CONFIG_OK) ST.fbOk=true;
+  const saved=localStorage.getItem('cgp_fbconfig');
+  if(saved){try{const c=JSON.parse(saved);if(c.apiKey&&c.apiKey!=='AIzaSyBMTc5KoMgW40LZ69GK03ee2Cz9fcMHztU')ST.fbOk=true;}catch(e){}}
+});
+
+window.addEventListener('load',()=>{
+  setTimeout(()=>{ renderLogin(); },200);
+});
+</script>
+</body></html>
